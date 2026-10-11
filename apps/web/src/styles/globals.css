@@ -1,0 +1,81 @@
+@import "@fontsource-variable/inter";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Tokens — ver sección 3 del brief. Valores en HSL para shadcn. */
+    --background: 0 0% 94.5%;        /* #F1F1F1 */
+    --foreground: 0 0% 18.8%;        /* #303030 */
+    --card: 0 0% 100%;               /* #FFFFFF */
+    --card-foreground: 0 0% 18.8%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 18.8%;
+    --primary: 0 0% 18.8%;           /* #303030 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 100%;
+    --secondary-foreground: 0 0% 18.8%;
+    --muted: 0 0% 96.5%;             /* #F6F6F6 */
+    --muted-foreground: 0 0% 38%;    /* #616161 */
+    --accent: 0 0% 96.5%;
+    --accent-foreground: 0 0% 18.8%;
+    --destructive: 9 86% 41%;        /* #C5280C */
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 89%;              /* #E3E3E3 */
+    --input: 0 0% 76%;               /* #C2C2C2 borde de campos */
+    --ring: 216 100% 44%;            /* #005BD3 foco */
+    --radius: 8px;
+    --surface-hover: 0 0% 97.3%;     /* #F7F7F7 */
+    --surface-selected: 0 0% 94.5%;
+
+    --tone-success-bg: 150 90% 90%;  /* #CDFEE1 */
+    --tone-success-fg: 150 65% 18%;  /* #0C5132 */
+    --tone-warning-bg: 38 100% 81%;  /* #FFD79D */
+    --tone-warning-fg: 42 100% 18%;  /* #5E4200 */
+    --tone-critical-bg: 2 95% 92%;   /* #FEDAD9 */
+    --tone-critical-fg: 9 85% 30%;   /* #8E1F0B */
+    --tone-info-bg: 209 100% 94%;    /* #E0F0FF */
+    --tone-info-fg: 200 100% 24%;    /* #00527C */
+    --tone-neutral-bg: 0 0% 89%;     /* #E3E3E3 */
+    --tone-neutral-fg: 0 0% 18.8%;
+  }
+
+  * {
+    @apply border-border;
+  }
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    @apply bg-background text-foreground text-base font-sans;
+  }
+  h1, h2, h3, h4 {
+    @apply font-semibold tracking-[-0.01em];
+  }
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-1 ring-offset-background;
+  }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] { -moz-appearance: textfield; }
+}
+
+@layer utilities {
+  .tabular { font-variant-numeric: tabular-nums; }
+  .page-title { @apply text-xl font-semibold leading-8 text-foreground; }
+  .section-title { @apply text-md font-semibold leading-6 text-foreground; }
+  .text-subdued { @apply text-muted-foreground; }
+  .surface { @apply rounded-lg border border-border bg-card shadow-card; }
+  .scrollbar-thin::-webkit-scrollbar { height: 8px; width: 8px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 8px; }
+}
+
+@media print {
+  body { background: #fff; }
+  .no-print { display: none !important; }
+}

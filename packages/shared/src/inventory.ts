@@ -3,6 +3,17 @@ import { paginationQuery, quantity } from "./common";
 import { AdjustmentMode, CountStatus, MovementType, StockBucket, TransferStatus } from "./enums";
 import { locationSchema, variantSchema } from "./catalog";
 
+export const variantRefSchema = variantSchema
+  .pick({ id: true, title: true, sku: true, barcode: true, price: true, cost: true, optionValues: true })
+  .extend({
+    product: z.object({
+      id: z.string(),
+      title: z.string(),
+      status: z.string(),
+      thumbUrl: z.string().nullable(),
+    }),
+  });
+
 export const inventoryLevelSchema = z.object({
   id: z.string(),
   variantId: z.string(),
@@ -14,17 +25,7 @@ export const inventoryLevelSchema = z.object({
   onHand: z.number().int().describe("available + committed + unavailable"),
   minStock: z.number().int().nullable(),
   updatedAt: z.string(),
-  variant: variantSchema
-    .pick({ id: true, title: true, sku: true, barcode: true, price: true, cost: true, optionValues: true })
-    .extend({
-      product: z.object({
-        id: z.string(),
-        title: z.string(),
-        status: z.string(),
-        thumbUrl: z.string().nullable(),
-      }),
-    })
-    .optional(),
+  variant: variantRefSchema.optional(),
   location: locationSchema.pick({ id: true, name: true }).optional(),
 });
 export type InventoryLevel = z.infer<typeof inventoryLevelSchema>;
@@ -111,7 +112,7 @@ export const movementSchema = z.object({
   actorId: z.string().nullable(),
   actorName: z.string().nullable(),
   createdAt: z.string(),
-  variant: inventoryLevelSchema.shape.variant.optional(),
+  variant: variantRefSchema.optional(),
   location: locationSchema.pick({ id: true, name: true }).optional(),
 });
 export type Movement = z.infer<typeof movementSchema>;
@@ -175,7 +176,7 @@ export const transferSchema = z.object({
       variantId: z.string(),
       quantity: z.number().int(),
       receivedQuantity: z.number().int(),
-      variant: inventoryLevelSchema.shape.variant,
+      variant: variantRefSchema,
     }),
   ),
   totalQuantity: z.number().int(),
@@ -217,7 +218,7 @@ export const countSchema = z.object({
       expected: z.number().int(),
       counted: z.number().int(),
       difference: z.number().int(),
-      variant: inventoryLevelSchema.shape.variant,
+      variant: variantRefSchema,
     }),
   ),
   appliedAt: z.string().nullable(),

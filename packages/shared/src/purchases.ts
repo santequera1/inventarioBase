@@ -2,7 +2,7 @@ import { z } from "zod";
 import { money, paginationQuery } from "./common";
 import { PurchaseOrderStatus } from "./enums";
 import { locationSchema, supplierSchema } from "./catalog";
-import { inventoryLevelSchema } from "./inventory";
+import { variantRefSchema } from "./inventory";
 
 export const purchaseItemInput = z.object({
   variantId: z.string(),
@@ -53,7 +53,7 @@ export const purchaseOrderSchema = z.object({
       quantity: z.number().int(),
       receivedQuantity: z.number().int(),
       unitCost: z.number().int(),
-      variant: inventoryLevelSchema.shape.variant,
+      variant: variantRefSchema,
     }),
   ),
   createdAt: z.string(),
