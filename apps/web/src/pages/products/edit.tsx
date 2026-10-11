@@ -100,7 +100,7 @@ export default function ProductEditPage() {
           claim((v) => Object.entries(v.optionValues ?? {}).every(([k, val]) => ov[k] === val) && Object.keys(v.optionValues ?? {}).length < Object.keys(ov).length) ??
           (combos.length === 1 ? claim(() => true) : undefined);
         return existing
-          ? { ...existing, optionValues: ov, position: i }
+          ? { ...existing, sku: existing.sku?.trim() || skuFrom(getValues("title") || "SKU", ov), optionValues: ov, position: i }
           : { sku: skuFrom(getValues("title") || "SKU", ov), price: current[0]?.price ?? 0, cost: current[0]?.cost ?? null, compareAtPrice: null, barcode: "", weightGrams: null, optionValues: ov, trackInventory: true, active: true, position: i, initialStock: [] };
       });
       setValue("variants", next, { shouldDirty: true });
@@ -177,7 +177,21 @@ export default function ProductEditPage() {
         } else toast.error("No se pudo guardar");
       }
     },
-    () => toast.error("Revisa los campos marcados en rojo"),
+    (errors) => {
+      const first = (function find(e: unknown, path: string[] = []): string | null {
+        if (!e || typeof e !== "object") return null;
+        if ("message" in e && typeof (e as { message?: unknown }).message === "string") {
+          const label = path[0] === "variants" ? `Variante ${Number(path[1]) + 1}` : path[0] === "options" ? `Opción ${Number(path[1]) + 1}` : path.join(".");
+          return `${label}: ${(e as { message: string }).message}`;
+        }
+        for (const [k, v] of Object.entries(e as Record<string, unknown>)) {
+          const r = find(v, [...path, k]);
+          if (r) return r;
+        }
+        return null;
+      })(errors);
+      toast.error("Revisa los campos marcados en rojo", { description: first ?? undefined });
+    },
   );
 
   const archive = async () => {
