@@ -1,0 +1,15 @@
+node_modules/
+dist/
+build/
+.env
+.env.*
+!.env.example
+uploads/
+backups/
+logs/
+*.log
+.DS_Store
+coverage/
+.turbo/
+*.tsbuildinfo
+apps/api/prisma/*.db

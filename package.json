@@ -1,0 +1,23 @@
+{
+  "name": "inventario-willy",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Sistema de inventario y ventas con API pública — Inventario Willy",
+  "packageManager": "pnpm@10.34.6",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev": "pnpm -r --parallel --filter ./apps/* dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "format": "prettier --write \"**/*.{ts,tsx,json,md,css}\"",
+    "db:migrate": "pnpm --filter @inventario/api db:migrate",
+    "db:seed": "pnpm --filter @inventario/api db:seed",
+    "db:seed:demo": "pnpm --filter @inventario/api db:seed:demo"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.3"
+  }
+}
