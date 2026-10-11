@@ -1,0 +1,617 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Identidad y acceso ----------
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  permissions String[]
+  isSystem    Boolean  @default(false)
+  users       User[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  name              String
+  passwordHash      String
+  active            Boolean   @default(true)
+  roleId            String
+  role              Role      @relation(fields: [roleId], references: [id])
+  defaultLocationId String?
+  lastLoginAt       DateTime?
+  sessions          Session[]
+  apiKeys           ApiKey[]  @relation("ApiKeyCreator")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userAgent String?
+  ip        String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  name        String
+  prefix      String    @unique
+  hash        String
+  scopes      String[]
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+  expiresAt   DateTime?
+  createdById String?
+  createdBy   User?     @relation("ApiKeyCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model IdempotencyKey {
+  id             String   @id @default(cuid())
+  key            String
+  ownerKey       String // "user:<id>" | "apikey:<id>"
+  endpoint       String
+  requestHash    String
+  responseStatus Int
+  responseBody   Json
+  createdAt      DateTime @default(now())
+
+  @@unique([ownerKey, key])
+  @@index([createdAt])
+}
+
+// ---------- Configuración ----------
+
+model StoreSettings {
+  id                 Int      @id @default(1)
+  name               String   @default("Mi tienda")
+  legalName          String?
+  nit                String?
+  address            String?
+  city               String?
+  phone              String?
+  email              String?
+  receiptFooter      String?
+  currency           String   @default("COP")
+  timezone           String   @default("America/Bogota")
+  allowNegativeStock Boolean  @default(false)
+  defaultTaxRate     Int      @default(19)
+  pricesIncludeTax   Boolean  @default(true)
+  orderPrefix        String   @default("#")
+  orderNextNumber    Int      @default(1001)
+  lowStockThreshold  Int      @default(5)
+  updatedAt          DateTime @updatedAt
+}
+
+model Location {
+  id          String @id @default(cuid())
+  name        String
+  address     String?
+  city        String?
+  phone       String?
+  isDefault   Boolean @default(false)
+  active      Boolean @default(true)
+  sellsOnline Boolean @default(true)
+
+  levels           InventoryLevel[]
+  movements        InventoryMovement[]
+  transfersOrigin  Transfer[]          @relation("TransferOrigin")
+  transfersDest    Transfer[]          @relation("TransferDestination")
+  counts           StockCount[]
+  purchaseOrders   PurchaseOrder[]
+  orders           Order[]
+  cashSessions     CashSession[]
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+}
+
+model PaymentMethod {
+  id                String  @id @default(cuid())
+  name              String
+  code              String  @unique
+  type              String // CASH | CARD | TRANSFER | WALLET | OTHER
+  active            Boolean @default(true)
+  requiresReference Boolean @default(false)
+  position          Int     @default(0)
+}
+
+model Reason {
+  id       String  @id @default(cuid())
+  name     String
+  kind     String  @default("ADJUSTMENT") // ADJUSTMENT | UNAVAILABLE | RETURN
+  active   Boolean @default(true)
+  position Int     @default(0)
+
+  @@unique([name, kind])
+}
+
+model SavedView {
+  id        String   @id @default(cuid())
+  userId    String
+  resource  String
+  name      String
+  filters   Json
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([userId, resource])
+}
+
+// ---------- Catálogo ----------
+
+model Category {
+  id        String     @id @default(cuid())
+  name      String
+  slug      String     @unique
+  parentId  String?
+  parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children  Category[] @relation("CategoryTree")
+  products  Product[]
+  createdAt DateTime   @default(now())
+}
+
+model Supplier {
+  id             String          @id @default(cuid())
+  name           String
+  nit            String?
+  contactName    String?
+  email          String?
+  phone          String?
+  address        String?
+  notes          String?
+  active         Boolean         @default(true)
+  products       Product[]
+  purchaseOrders PurchaseOrder[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model Product {
+  id          String         @id @default(cuid())
+  title       String
+  description String?
+  status      String         @default("ACTIVE") // ACTIVE | DRAFT | ARCHIVED
+  categoryId  String?
+  category    Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  supplierId  String?
+  supplier    Supplier?      @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  tags        String[]
+  taxRate     Int            @default(19)
+  options     Json           @default("[]")
+  images      ProductImage[]
+  variants    Variant[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([status])
+  @@index([updatedAt])
+  @@index([categoryId])
+}
+
+model ProductImage {
+  id        String    @id @default(cuid())
+  productId String?
+  product   Product?  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  path      String
+  thumbPath String
+  alt       String?
+  width     Int?
+  height    Int?
+  size      Int?
+  position  Int       @default(0)
+  variants  Variant[]
+  createdAt DateTime  @default(now())
+}
+
+model Variant {
+  id             String   @id @default(cuid())
+  productId      String
+  product        Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  title          String   @default("Default")
+  sku            String   @unique
+  barcode        String?
+  price          Int      @default(0)
+  compareAtPrice Int?
+  cost           Int?
+  weightGrams    Int?
+  optionValues   Json     @default("{}")
+  position       Int      @default(0)
+  trackInventory Boolean  @default(true)
+  active         Boolean  @default(true)
+  imageId        String?
+  image          ProductImage? @relation(fields: [imageId], references: [id], onDelete: SetNull)
+
+  levels         InventoryLevel[]
+  movements      InventoryMovement[]
+  transferItems  TransferItem[]
+  countItems     StockCountItem[]
+  purchaseItems  PurchaseOrderItem[]
+  orderLines     OrderLine[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([barcode])
+  @@index([productId])
+  @@index([updatedAt])
+}
+
+// ---------- Inventario ----------
+
+model InventoryLevel {
+  id          String   @id @default(cuid())
+  variantId   String
+  variant     Variant  @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  locationId  String
+  location    Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  available   Int      @default(0)
+  committed   Int      @default(0)
+  unavailable Int      @default(0)
+  incoming    Int      @default(0)
+  minStock    Int?
+  updatedAt   DateTime @updatedAt
+
+  @@unique([variantId, locationId])
+  @@index([locationId])
+  @@index([updatedAt])
+}
+
+/// Libro mayor inmutable. Nunca se actualiza ni se borra.
+model InventoryMovement {
+  id               String   @id @default(cuid())
+  variantId        String
+  variant          Variant  @relation(fields: [variantId], references: [id])
+  locationId       String
+  location         Location @relation(fields: [locationId], references: [id])
+  type             String // SALE | ADJUSTMENT | RECEIPT | TRANSFER_OUT | TRANSFER_IN | RETURN | COUNT | STATE_CHANGE | RESERVATION | CANCELLATION | PURCHASE_INCOMING
+  bucket           String // AVAILABLE | COMMITTED | UNAVAILABLE | INCOMING
+  quantity         Int
+  availableAfter   Int
+  committedAfter   Int
+  unavailableAfter Int
+  incomingAfter    Int
+  reason           String?
+  note             String?
+  referenceType    String?
+  referenceId      String?
+  referenceLabel   String?
+  actorType        String   @default("SYSTEM") // USER | API_KEY | SYSTEM
+  actorId          String?
+  actorName        String?
+  createdAt        DateTime @default(now())
+
+  @@index([variantId, locationId, createdAt])
+  @@index([locationId, createdAt])
+  @@index([createdAt])
+  @@index([referenceType, referenceId])
+  @@index([type])
+}
+
+model Transfer {
+  id                    String         @id @default(cuid())
+  number                String         @unique
+  status                String         @default("PENDING") // DRAFT | PENDING | IN_TRANSIT | RECEIVED | CANCELLED
+  originLocationId      String
+  origin                Location       @relation("TransferOrigin", fields: [originLocationId], references: [id])
+  destinationLocationId String
+  destination           Location       @relation("TransferDestination", fields: [destinationLocationId], references: [id])
+  note                  String?
+  expectedAt            DateTime?
+  dispatchedAt          DateTime?
+  receivedAt            DateTime?
+  createdById           String?
+  items                 TransferItem[]
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  @@index([status])
+}
+
+model TransferItem {
+  id               String   @id @default(cuid())
+  transferId       String
+  transfer         Transfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  variantId        String
+  variant          Variant  @relation(fields: [variantId], references: [id])
+  quantity         Int
+  receivedQuantity Int      @default(0)
+}
+
+model StockCount {
+  id         String           @id @default(cuid())
+  number     String           @unique
+  locationId String
+  location   Location         @relation(fields: [locationId], references: [id])
+  status     String           @default("OPEN") // OPEN | APPLIED | CANCELLED
+  note       String?
+  items      StockCountItem[]
+  appliedAt  DateTime?
+  createdById String?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+}
+
+model StockCountItem {
+  id        String     @id @default(cuid())
+  countId   String
+  count     StockCount @relation(fields: [countId], references: [id], onDelete: Cascade)
+  variantId String
+  variant   Variant    @relation(fields: [variantId], references: [id])
+  expected  Int
+  counted   Int
+
+  @@unique([countId, variantId])
+}
+
+// ---------- Compras ----------
+
+model PurchaseOrder {
+  id          String              @id @default(cuid())
+  number      String              @unique
+  status      String              @default("DRAFT") // DRAFT | ORDERED | PARTIAL | RECEIVED | CANCELLED
+  supplierId  String
+  supplier    Supplier            @relation(fields: [supplierId], references: [id])
+  locationId  String
+  location    Location            @relation(fields: [locationId], references: [id])
+  reference   String?
+  note        String?
+  expectedAt  DateTime?
+  orderedAt   DateTime?
+  receivedAt  DateTime?
+  createdById String?
+  items       PurchaseOrderItem[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@index([status])
+}
+
+model PurchaseOrderItem {
+  id               String        @id @default(cuid())
+  purchaseOrderId  String
+  purchaseOrder    PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  variantId        String
+  variant          Variant       @relation(fields: [variantId], references: [id])
+  quantity         Int
+  receivedQuantity Int           @default(0)
+  unitCost         Int
+}
+
+// ---------- Ventas ----------
+
+model Customer {
+  id             String    @id @default(cuid())
+  documentType   String?
+  documentNumber String?
+  firstName      String
+  lastName       String?
+  companyName    String?
+  email          String?
+  phone          String?
+  address        String?
+  city           String?
+  notes          String?
+  tags           String[]
+  ordersCount    Int       @default(0)
+  totalSpent     Int       @default(0)
+  lastOrderAt    DateTime?
+  orders         Order[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([documentNumber])
+  @@index([updatedAt])
+}
+
+model Order {
+  id                String         @id @default(cuid())
+  number            String         @unique
+  sequence          Int
+  status            String         @default("COMPLETED") // OPEN | COMPLETED | CANCELLED
+  paymentStatus     String         @default("PENDING")
+  fulfillmentStatus String         @default("UNFULFILLED")
+  source            String         @default("POS")
+  locationId        String
+  location          Location       @relation(fields: [locationId], references: [id])
+  customerId        String?
+  customer          Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  subtotal          Int            @default(0)
+  discountTotal     Int            @default(0)
+  taxTotal          Int            @default(0)
+  total             Int            @default(0)
+  paidTotal         Int            @default(0)
+  refundedTotal     Int            @default(0)
+  costTotal         Int            @default(0)
+  note              String?
+  externalRef       String?
+  cashSessionId     String?
+  cashSession       CashSession?   @relation(fields: [cashSessionId], references: [id], onDelete: SetNull)
+  createdById       String?
+  createdByName     String?
+  items             OrderLine[]
+  payments          OrderPayment[]
+  events            OrderEvent[]
+  returns           Return[]
+  completedAt       DateTime?
+  cancelledAt       DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@index([createdAt])
+  @@index([status, paymentStatus])
+  @@index([locationId, createdAt])
+  @@index([customerId])
+  @@index([updatedAt])
+}
+
+model OrderLine {
+  id               String   @id @default(cuid())
+  orderId          String
+  order            Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variantId        String?
+  variant          Variant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  productTitle     String
+  variantTitle     String
+  sku              String
+  quantity         Int
+  returnedQuantity Int      @default(0)
+  unitPrice        Int
+  unitCost         Int      @default(0)
+  discount         Int      @default(0)
+  taxRate          Int      @default(0)
+  taxAmount        Int      @default(0)
+  subtotal         Int
+  total            Int
+  thumbPath        String?
+
+  @@index([variantId])
+}
+
+model OrderPayment {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  methodCode String
+  methodName String
+  amount     Int
+  received   Int?
+  change     Int      @default(0)
+  reference  String?
+  kind       String   @default("PAYMENT") // PAYMENT | REFUND
+  cashSessionId String?
+  createdAt  DateTime @default(now())
+
+  @@index([orderId])
+  @@index([cashSessionId])
+}
+
+model OrderEvent {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  type      String
+  message   String
+  actorName String?
+  createdAt DateTime @default(now())
+
+  @@index([orderId, createdAt])
+}
+
+model Return {
+  id           String   @id @default(cuid())
+  orderId      String
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  reason       String
+  note         String?
+  refundAmount Int
+  items        Json
+  createdById  String?
+  createdAt    DateTime @default(now())
+}
+
+model CashSession {
+  id             String         @id @default(cuid())
+  locationId     String
+  location       Location       @relation(fields: [locationId], references: [id])
+  status         String         @default("OPEN")
+  openedById     String
+  openedByName   String?
+  closedById     String?
+  closedByName   String?
+  openingAmount  Int
+  expectedAmount Int?
+  closingAmount  Int?
+  difference     Int?
+  note           String?
+  openedAt       DateTime       @default(now())
+  closedAt       DateTime?
+  orders         Order[]
+  movements      CashMovement[]
+
+  @@index([locationId, status])
+}
+
+model CashMovement {
+  id        String      @id @default(cuid())
+  sessionId String
+  session   CashSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  type      String // IN | OUT
+  amount    Int
+  reason    String
+  actorName String?
+  createdAt DateTime    @default(now())
+}
+
+// ---------- Integraciones ----------
+
+model Webhook {
+  id          String            @id @default(cuid())
+  url         String
+  description String?
+  events      String[]
+  secret      String
+  active      Boolean           @default(true)
+  failureCount Int              @default(0)
+  deliveries  WebhookDelivery[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+model WebhookDelivery {
+  id             String    @id @default(cuid())
+  webhookId      String
+  webhook        Webhook   @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  event          String
+  payload        Json
+  status         String    @default("PENDING") // PENDING | SUCCESS | FAILED | RETRYING
+  attempts       Int       @default(0)
+  nextAttemptAt  DateTime?
+  responseStatus Int?
+  responseBody   String?
+  error          String?
+  durationMs     Int?
+  deliveredAt    DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([status, nextAttemptAt])
+  @@index([webhookId, createdAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  entity    String
+  entityId  String?
+  actorType String   @default("SYSTEM")
+  actorId   String?
+  actorName String?
+  ip        String?
+  before    Json?
+  after     Json?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@index([actorId])
+}
+
+model Counter {
+  key   String @id
+  value Int    @default(0)
+}
