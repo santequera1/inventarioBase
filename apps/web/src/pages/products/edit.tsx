@@ -197,7 +197,7 @@ export default function ProductEditPage() {
                   {!hasOptions ? <TextField control={control} name="variants.0.price" label="Precio" required parse="money" inputProps={{ prefix: "$", min: 0 }} /> : null}
                   {!hasOptions ? <TextField control={control} name="variants.0.compareAtPrice" label="Precio comparado" parse="money" help="Precio anterior tachado" inputProps={{ prefix: "$" }} /> : null}
                   {!hasOptions ? <TextField control={control} name="variants.0.cost" label="Costo por unidad" parse="money" inputProps={{ prefix: "$" }} /> : null}
-                  <SelectField control={control} name="taxRate" label="IVA" options={[{ value: "0", label: "0 % (excluido / exento)" }, { value: "5", label: "5 %" }, { value: "19", label: "19 %" }]} />
+                  <SelectField control={control} name="taxRate" label="IVA" numeric options={[{ value: "0", label: "0 % (excluido / exento)" }, { value: "5", label: "5 %" }, { value: "19", label: "19 %" }]} />
                 </FormRow>
                 {!hasOptions && (watchedVariants[0]?.price ?? 0) > 0 && watchedVariants[0]?.cost ? (
                   <p className="mt-3 text-sm text-muted-foreground">

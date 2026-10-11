@@ -39,6 +39,7 @@ export function DataTable<T>({ columns, data, loading, onRowClick, getRowId, sel
       header: ({ table }) => <Checkbox aria-label="Seleccionar todo" checked={table.getIsAllPageRowsSelected() ? true : table.getIsSomePageRowsSelected() ? "indeterminate" : false} onCheckedChange={(v) => table.toggleAllPageRowsSelected(!!v)} />,
       cell: ({ row }) => <Checkbox aria-label="Seleccionar fila" checked={row.getIsSelected()} onCheckedChange={(v) => row.toggleSelected(!!v)} onClick={(e) => e.stopPropagation()} />,
       size: 40,
+      meta: { className: "hidden md:table-cell" },
     };
     return [sel, ...columns];
   }, [columns, selectable]);

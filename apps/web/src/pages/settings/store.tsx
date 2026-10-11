@@ -39,7 +39,7 @@ export default function StoreSettings() {
       </Card>
       <Card title="Impuestos y precios">
         <div className="space-y-4">
-          <FormRow><SelectField control={form.control} name="defaultTaxRate" label="IVA por defecto para nuevos productos" options={[{ value: "0", label: "0 %" }, { value: "5", label: "5 %" }, { value: "19", label: "19 %" }]} />
+          <FormRow><SelectField control={form.control} name="defaultTaxRate" label="IVA por defecto para nuevos productos" numeric options={[{ value: "0", label: "0 %" }, { value: "5", label: "5 %" }, { value: "19", label: "19 %" }]} />
             <Controller control={form.control} name="pricesIncludeTax" render={({ field }) => <Field label="Los precios incluyen IVA" help="Habitual en Colombia: el precio de venta ya trae el IVA y el recibo lo desglosa."><div className="flex h-9 items-center"><Switch checked={!!field.value} onCheckedChange={field.onChange} /></div></Field>} /></FormRow>
         </div>
       </Card>

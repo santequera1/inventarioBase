@@ -9,7 +9,7 @@ export function LocationSelect({ value, onChange, allowAll, className, id, activ
   const list = (data ?? []).filter((l) => (!activeOnly || l.active) && l.id !== exclude);
   return (
     <Select value={value || (allowAll ? "__all" : "")} onValueChange={(v) => onChange(v === "__all" ? "" : v)}>
-      <SelectTrigger id={id} className={cn("min-w-[180px]", className)} aria-label="Ubicación">
+      <SelectTrigger id={id} className={cn("w-auto min-w-[180px]", className)} aria-label="Ubicación">
         <span className="flex items-center gap-2 truncate">
           <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
           <SelectValue placeholder="Ubicación" />

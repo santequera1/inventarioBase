@@ -78,6 +78,7 @@ export default function InventoryListPage() {
         id: "product",
         header: "Producto",
         enableSorting: true,
+        meta: { className: "max-w-[200px] sm:max-w-none" },
         cell: ({ row }) => {
           const l = row.original;
           return (

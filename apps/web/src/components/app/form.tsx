@@ -73,14 +73,14 @@ export function TextareaField<T extends FieldValues>({ control, name, label, hel
   );
 }
 
-export function SelectField<T extends FieldValues>({ control, name, label, help, required, options, placeholder, className, allowEmpty, emptyLabel = "Ninguno" }: { control: Control<T>; name: FieldPath<T>; label?: React.ReactNode; help?: React.ReactNode; required?: boolean; options: { value: string; label: string }[]; placeholder?: string; className?: string; allowEmpty?: boolean; emptyLabel?: string }) {
+export function SelectField<T extends FieldValues>({ control, name, label, help, required, options, placeholder, className, allowEmpty, emptyLabel = "Ninguno", numeric }: { control: Control<T>; name: FieldPath<T>; label?: React.ReactNode; help?: React.ReactNode; required?: boolean; options: { value: string; label: string }[]; placeholder?: string; className?: string; allowEmpty?: boolean; emptyLabel?: string; numeric?: boolean }) {
   return (
     <Controller
       control={control}
       name={name}
       render={({ field, fieldState }) => (
         <Field label={label} htmlFor={name} help={help} error={fieldState.error?.message} required={required} className={className}>
-          <Select value={(field.value as string) ?? (allowEmpty ? "__none" : "")} onValueChange={(v) => field.onChange(v === "__none" ? null : v)}>
+          <Select value={field.value === null || field.value === undefined ? (allowEmpty ? "__none" : "") : String(field.value)} onValueChange={(v) => field.onChange(v === "__none" ? null : numeric ? Number(v) : v)}>
             <SelectTrigger id={name} invalid={!!fieldState.error}>
               <SelectValue placeholder={placeholder ?? "Selecciona…"} />
             </SelectTrigger>
