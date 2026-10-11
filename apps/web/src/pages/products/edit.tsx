@@ -76,18 +76,62 @@ export default function ProductEditPage() {
     setImages(p.images.map((i) => ({ id: i.id, url: i.url, thumbUrl: i.thumbUrl })));
   }, [product.data, reset]);
 
-  /** Regenera variantes a partir de las opciones, conservando datos de las existentes. */
-  const regenerateVariants = React.useCallback(() => {
-    const opts = getValues("options").filter((o) => o.name.trim() && o.values.some(Boolean));
-    const combos = cartesian(opts);
-    const current = getValues("variants");
-    const next = combos.map((ov, i) => {
-      const key = JSON.stringify(ov);
-      const existing = current.find((v) => JSON.stringify(v.optionValues) === key) ?? (combos.length === 1 ? current[0] : undefined);
-      return existing ? { ...existing, optionValues: ov, position: i } : { sku: skuFrom(getValues("title") || "SKU", ov), price: current[0]?.price ?? 0, cost: current[0]?.cost ?? null, compareAtPrice: null, barcode: "", weightGrams: null, optionValues: ov, trackInventory: true, active: true, position: i, initialStock: [] };
-    });
-    setValue("variants", next, { shouldDirty: true });
-  }, [getValues, setValue]);
+  /**
+   * Regenera variantes a partir de las opciones. Conserva las variantes existentes:
+   * primero por coincidencia exacta y, si no, por coincidencia parcial (p. ej. al añadir
+   * "Color" a un producto que solo tenía "Talla", la variante S conserva SKU y stock en el primer color).
+   */
+  const regenerateVariants = React.useCallback(
+    (override?: { name: string; values: string[] }[]) => {
+      const opts = (override ?? getValues("options")).map((o) => ({ name: o.name.trim(), values: o.values.map((v) => v.trim()).filter(Boolean) })).filter((o) => o.name && o.values.length);
+      const combos = cartesian(opts);
+      const current = getValues("variants");
+      const used = new Set<number>();
+      const claim = (pred: (v: (typeof current)[number]) => boolean) => {
+        const idx = current.findIndex((v, i) => !used.has(i) && pred(v));
+        if (idx === -1) return undefined;
+        used.add(idx);
+        return current[idx];
+      };
+      const next = combos.map((ov, i) => {
+        const key = JSON.stringify(ov);
+        const existing =
+          claim((v) => JSON.stringify(v.optionValues) === key) ??
+          claim((v) => Object.entries(v.optionValues ?? {}).every(([k, val]) => ov[k] === val) && Object.keys(v.optionValues ?? {}).length < Object.keys(ov).length) ??
+          (combos.length === 1 ? claim(() => true) : undefined);
+        return existing
+          ? { ...existing, optionValues: ov, position: i }
+          : { sku: skuFrom(getValues("title") || "SKU", ov), price: current[0]?.price ?? 0, cost: current[0]?.cost ?? null, compareAtPrice: null, barcode: "", weightGrams: null, optionValues: ov, trackInventory: true, active: true, position: i, initialStock: [] };
+      });
+      setValue("variants", next, { shouldDirty: true });
+    },
+    [getValues, setValue],
+  );
+
+  /** Renombra una opción y actualiza las claves de optionValues en las variantes. */
+  const renameOption = (oi: number, name: string) => {
+    const opts = getValues("options");
+    const oldName = opts[oi]?.name ?? "";
+    setValue(`options.${oi}.name`, name, { shouldDirty: true });
+    if (oldName && oldName !== name) {
+      const vars = getValues("variants").map((v) => {
+        const ov: Record<string, string> = {};
+        for (const [k, val] of Object.entries(v.optionValues ?? {})) ov[k === oldName ? name : k] = val;
+        return { ...v, optionValues: ov };
+      });
+      setValue("variants", vars, { shouldDirty: true });
+    }
+  };
+
+  /** Añade valores (separados por coma) a una opción y regenera. */
+  const addOptionValues = (oi: number, raw: string, field: { value: string[]; onChange: (v: string[]) => void }) => {
+    const vals = raw.split(",").map((x) => x.trim()).filter(Boolean);
+    const next = [...field.value.filter(Boolean), ...vals.filter((v) => !field.value.includes(v))];
+    if (next.length === field.value.filter(Boolean).length) return;
+    field.onChange(next);
+    const opts = getValues("options").map((o, i) => (i === oi ? { ...o, values: next } : o));
+    regenerateVariants(opts);
+  };
 
   const onUpload = async (files: FileList | null) => {
     if (!files?.length) return;
@@ -207,52 +251,67 @@ export default function ProductEditPage() {
                 <Controller control={control} name="taxRate" render={({ field }) => <input type="hidden" value={field.value} readOnly />} />
               </Card>
 
-              <Card title="Variantes" description="Añade opciones como Talla o Color para generar variantes con SKU propio." actions={!readOnly ? <Button type="button" variant="secondary" size="sm" onClick={() => options.append({ name: options.fields.length === 0 ? "Talla" : "Color", values: [""] })} disabled={options.fields.length >= 3}><Plus /> Añadir opción</Button> : undefined}>
+              <Card title="Variantes" description="Añade opciones como Talla o Color para generar variantes con SKU propio." actions={!readOnly ? <Button type="button" variant="secondary" size="sm" onClick={() => options.append({ name: ["Talla", "Color", "Material"].find((n) => !getValues("options").some((o) => o.name.trim().toLowerCase() === n.toLowerCase())) ?? "", values: [] })} disabled={options.fields.length >= 3}><Plus /> Añadir opción</Button> : undefined}>
                 {options.fields.length > 0 ? (
                   <div className="mb-4 space-y-3">
                     {options.fields.map((o, oi) => (
                       <div key={o._k} className="rounded-md border border-border p-3">
                         <div className="flex items-end gap-2">
                           <Field label="Nombre de la opción" className="flex-1" htmlFor={`opt-${oi}`}>
-                            <Input id={`opt-${oi}`} {...form.register(`options.${oi}.name`)} placeholder="Talla" readOnly={readOnly} />
+                            <Controller control={control} name={`options.${oi}.name`} render={({ field }) => <Input id={`opt-${oi}`} value={field.value} onChange={(e) => renameOption(oi, e.target.value)} onBlur={() => regenerateVariants()} placeholder="Talla, Color, Material…" readOnly={readOnly} />} />
                           </Field>
-                          {!readOnly ? <Button type="button" variant="ghost" size="icon" aria-label="Quitar opción" onClick={() => { options.remove(oi); setTimeout(regenerateVariants, 0); }}><Trash2 /></Button> : null}
+                          {!readOnly ? <Button type="button" variant="ghost" size="icon" aria-label="Quitar opción" onClick={() => { const rest = getValues("options").filter((_, i) => i !== oi); options.remove(oi); regenerateVariants(rest); }}><Trash2 /></Button> : null}
                         </div>
                         <Controller
                           control={control}
                           name={`options.${oi}.values`}
                           render={({ field, fieldState }) => (
-                            <Field label="Valores" className="mt-3" error={fieldState.error?.message} help="Escribe un valor y pulsa Enter.">
+                            <Field label="Valores" className="mt-3" error={fieldState.error?.message} help="Escribe cada valor y pulsa Enter, coma o “Añadir”. Puedes pegar varios separados por coma.">
                               <div className="flex flex-wrap items-center gap-1.5 rounded-md border border-input bg-card p-1.5 focus-within:ring-2 focus-within:ring-ring">
                                 {field.value.filter(Boolean).map((v, vi) => (
                                   <Badge key={vi} tone="neutral" className="h-7 gap-1 pr-1 text-sm">
                                     {v}
-                                    {!readOnly ? <button type="button" onClick={() => { field.onChange(field.value.filter((_, i) => i !== field.value.indexOf(v))); setTimeout(regenerateVariants, 0); }} className="rounded p-0.5 hover:bg-black/10" aria-label={`Quitar ${v}`}><X className="h-3 w-3" /></button> : null}
+                                    {!readOnly ? <button type="button" onClick={() => { const next = field.value.filter((x) => x !== v); field.onChange(next); regenerateVariants(getValues("options").map((o, i) => (i === oi ? { ...o, values: next } : o))); }} className="rounded p-0.5 hover:bg-black/10" aria-label={`Quitar ${v}`}><X className="h-3 w-3" /></button> : null}
                                   </Badge>
                                 ))}
                                 {!readOnly ? (
-                                  <input
-                                    className="h-7 min-w-[100px] flex-1 bg-transparent px-1 text-base outline-none"
-                                    placeholder={field.value.filter(Boolean).length ? "" : "S, M, L…"}
-                                    onKeyDown={(e) => {
-                                      const el = e.currentTarget;
-                                      if ((e.key === "Enter" || e.key === ",") && el.value.trim()) {
-                                        e.preventDefault();
-                                        const vals = el.value.split(",").map((s) => s.trim()).filter(Boolean);
-                                        field.onChange([...field.value.filter(Boolean), ...vals.filter((v) => !field.value.includes(v))]);
-                                        el.value = "";
-                                        setTimeout(regenerateVariants, 0);
-                                      }
-                                    }}
-                                    onBlur={(e) => {
-                                      const el = e.currentTarget;
-                                      if (el.value.trim()) {
-                                        field.onChange([...field.value.filter(Boolean), ...el.value.split(",").map((s) => s.trim()).filter((v) => v && !field.value.includes(v))]);
-                                        el.value = "";
-                                        setTimeout(regenerateVariants, 0);
-                                      }
-                                    }}
-                                  />
+                                  <>
+                                    <input
+                                      className="h-7 min-w-[100px] flex-1 bg-transparent px-1 text-base outline-none"
+                                      placeholder={field.value.filter(Boolean).length ? "Añadir valor…" : "Ej. S, M, L  o  Rojo, Azul"}
+                                      aria-label={`Valores de ${watchedOptions[oi]?.name || "la opción"}`}
+                                      onKeyDown={(e) => {
+                                        const el = e.currentTarget;
+                                        if ((e.key === "Enter" || e.key === "," || e.key === "Tab") && el.value.trim()) {
+                                          e.preventDefault();
+                                          addOptionValues(oi, el.value, field);
+                                          el.value = "";
+                                        }
+                                      }}
+                                      onBlur={(e) => {
+                                        const el = e.currentTarget;
+                                        if (el.value.trim()) {
+                                          addOptionValues(oi, el.value, field);
+                                          el.value = "";
+                                        }
+                                      }}
+                                    />
+                                    <button
+                                      type="button"
+                                      className="h-7 rounded-sm px-2 text-sm font-medium text-muted-foreground hover:bg-black/5 hover:text-foreground"
+                                      onMouseDown={(e) => e.preventDefault()}
+                                      onClick={(e) => {
+                                        const el = e.currentTarget.previousElementSibling as HTMLInputElement | null;
+                                        if (el?.value.trim()) {
+                                          addOptionValues(oi, el.value, field);
+                                          el.value = "";
+                                        }
+                                        el?.focus();
+                                      }}
+                                    >
+                                      Añadir
+                                    </button>
+                                  </>
                                 ) : null}
                               </div>
                             </Field>
