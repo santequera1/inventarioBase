@@ -120,3 +120,8 @@ export const webhookEventLabels: Record<string, string> = {
   "transfer.received": "Transferencia recibida",
   "purchase_order.received": "Orden de compra recibida",
 };
+export const inquiryStatusLabels: Record<string, string> = {
+  NEW: "Nuevo",
+  CONFIRMED: "Confirmado",
+  CANCELLED: "Cancelado",
+};

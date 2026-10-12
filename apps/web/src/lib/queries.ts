@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tansta
 import type { z } from "zod";
 import type {
   locationSchema, categorySchema, supplierSchema, reasonSchema, paymentMethodSchema, storeSettingsSchema, inventoryLevelSchema, movementSchema,
-  productSchema, orderSchema, customerSchema, transferSchema, countSchema, purchaseOrderSchema, cashSessionSchema, savedViewSchema, apiKeySchema, webhookSchema, webhookDeliverySchema, userSchema, roleSchema, auditLogSchema, homeSummarySchema,
+  productSchema, catalogSchema, catalogInquirySchema, orderSchema, customerSchema, transferSchema, countSchema, purchaseOrderSchema, cashSessionSchema, savedViewSchema, apiKeySchema, webhookSchema, webhookDeliverySchema, userSchema, roleSchema, auditLogSchema, homeSummarySchema,
 } from "@inventario/shared";
 import { api, v1 } from "./api";
 
@@ -29,6 +29,8 @@ export type AppUser = z.infer<typeof userSchema>;
 export type Role = z.infer<typeof roleSchema>;
 export type AuditLog = z.infer<typeof auditLogSchema>;
 export type HomeSummary = z.infer<typeof homeSummarySchema>;
+export type Catalog = z.infer<typeof catalogSchema>;
+export type CatalogInquiry = z.infer<typeof catalogInquirySchema>;
 
 export type Page<T> = { data: T[]; meta: { next_cursor: string | null; has_more: boolean; limit: number; total?: number } };
 type Params = Record<string, string | number | boolean | undefined | null>;
@@ -63,3 +65,5 @@ export function useApiMutation<TIn, TOut>(fn: (input: TIn) => Promise<TOut>, inv
     },
   });
 }
+
+export const useCatalogs = () => useQuery({ queryKey: ["catalogs"], queryFn: () => api.get<{ data: Catalog[] }>(v1("/catalogs")), select: (d) => d.data });

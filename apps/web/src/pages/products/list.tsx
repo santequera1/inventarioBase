@@ -19,6 +19,7 @@ import { useAuth } from "@/lib/auth";
 import { useDebounce, useUrlState } from "@/lib/hooks";
 import { useCategories, useInvalidate, usePage, useSuppliersAll, type Product } from "@/lib/queries";
 import { downloadBlob } from "@/lib/utils";
+import { AddToCatalogDialog } from "@/pages/catalogs/add-to-catalog-dialog";
 
 const DEFAULTS = { view: "all", q: "", category: "", supplier: "", sort: "updated_at:desc" };
 
@@ -31,6 +32,7 @@ export default function ProductsListPage() {
   const suppliers = useSuppliersAll();
   const invalidate = useInvalidate();
   const [selection, setSelection] = React.useState<RowSelectionState>({});
+  const [catalogPick, setCatalogPick] = React.useState<{ ids: string[]; clear: () => void } | null>(null);
   const status = ProductStatus.options.includes(url.view as "ACTIVE") ? url.view : undefined;
   const pag = useCursorPagination(JSON.stringify([url.view, dq, url.category, url.supplier, url.sort]));
   const products = usePage<Product>("products", "/products", { q: dq || undefined, status, category_id: url.category || undefined, supplier_id: url.supplier || undefined, sort: url.sort, limit: 50, cursor: pag.cursor });
@@ -127,6 +129,7 @@ export default function ProductsListPage() {
                 <Button size="sm" variant="secondary" onClick={() => bulkStatus(ids, "ACTIVE", clear)}>Activar</Button>
                 <Button size="sm" variant="secondary" onClick={() => bulkStatus(ids, "DRAFT", clear)}>Pasar a borrador</Button>
                 <Button size="sm" variant="secondary" onClick={() => bulkStatus(ids, "ARCHIVED", clear)}>Archivar</Button>
+                <Button size="sm" variant="secondary" onClick={() => setCatalogPick({ ids, clear })}>Agregar a catálogo</Button>
               </>
             )}
             pagination={{ hasMore: products.data?.meta.has_more ?? false, onNext: () => pag.next(products.data?.meta.next_cursor ?? null), onPrev: pag.prev, canPrev: pag.canPrev, total: products.data?.meta.total, shown: products.data?.data.length ?? 0 }}
@@ -134,6 +137,7 @@ export default function ProductsListPage() {
           />
         )}
       </div>
+      <AddToCatalogDialog productIds={catalogPick?.ids ?? []} open={!!catalogPick} onOpenChange={(o) => !o && setCatalogPick(null)} onDone={() => catalogPick?.clear()} />
       <span className="sr-only">{Object.values(productStatusLabels).join(", ")}</span>
     </Page>
   );

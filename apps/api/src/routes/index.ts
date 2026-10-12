@@ -24,6 +24,8 @@ import auditRoutes from "./v1/audit";
 import savedViewRoutes from "./v1/saved-views";
 import uploadRoutes from "./v1/uploads";
 import importRoutes from "./v1/imports";
+import catalogRoutes from "./v1/catalogs";
+import publicRoutes from "./public";
 
 export const registerRoutes = fp(async (fastify) => {
   const app = fastify as unknown as App;
@@ -44,6 +46,7 @@ export const registerRoutes = fp(async (fastify) => {
   );
 
   await app.register(authRoutes, { prefix: "/api/auth" });
+  await app.register(publicRoutes, { prefix: "/api/public" });
   await app.register(
     async (v1) => {
       const v = v1 as unknown as App;
@@ -69,6 +72,7 @@ export const registerRoutes = fp(async (fastify) => {
       await v.register(savedViewRoutes);
       await v.register(uploadRoutes);
       await v.register(importRoutes);
+      await v.register(catalogRoutes);
     },
     { prefix: "/api/v1" },
   );

@@ -1,4 +1,4 @@
-import { ArrowLeftRight, BarChart3, Boxes, ClipboardList, Code2, Home, Package, Receipt, Settings, ShoppingCart, Truck, Users, type LucideIcon } from "lucide-react";
+import { ArrowLeftRight, BarChart3, BookOpen, Boxes, ClipboardList, Code2, Home, Package, Receipt, Settings, ShoppingCart, Truck, Users, type LucideIcon } from "lucide-react";
 import type { Permission } from "@inventario/shared";
 
 export type NavItem = { to: string; label: string; icon: LucideIcon; permission?: Permission; end?: boolean };
@@ -6,6 +6,7 @@ export type NavItem = { to: string; label: string; icon: LucideIcon; permission?
 export const NAV: NavItem[] = [
   { to: "/", label: "Inicio", icon: Home, end: true },
   { to: "/productos", label: "Productos", icon: Package, permission: "products.read" },
+  { to: "/catalogos", label: "Catálogos", icon: BookOpen, permission: "products.read" },
   { to: "/inventario", label: "Inventario", icon: Boxes, permission: "inventory.read" },
   { to: "/movimientos", label: "Movimientos", icon: ClipboardList, permission: "inventory.read" },
   { to: "/transferencias", label: "Transferencias", icon: ArrowLeftRight, permission: "inventory.read" },

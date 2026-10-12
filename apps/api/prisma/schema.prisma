@@ -197,6 +197,7 @@ model Product {
   options     Json           @default("[]")
   images      ProductImage[]
   variants    Variant[]
+  catalogItems CatalogItem[]
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
@@ -614,4 +615,59 @@ model AuditLog {
 model Counter {
   key   String @id
   value Int    @default(0)
+}
+
+// ---------- Catálogos públicos (cierre por WhatsApp) ----------
+
+model Catalog {
+  id             String           @id @default(cuid())
+  name           String
+  /// Identificador público no adivinable usado en el enlace /catalogo/<slug>.
+  slug           String           @unique
+  description    String?
+  whatsappPhone  String
+  active         Boolean          @default(true)
+  /// true = incluye todos los productos activos; false = solo los de `items`.
+  allProducts    Boolean          @default(false)
+  showStock      Boolean          @default(false)
+  hideOutOfStock Boolean          @default(false)
+  /// Ubicación de la que se toma el stock; null = todas las ubicaciones activas que venden en línea.
+  locationId     String?
+  messageIntro   String?
+  views          Int              @default(0)
+  items          CatalogItem[]
+  inquiries      CatalogInquiry[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+}
+
+model CatalogItem {
+  id        String  @id @default(cuid())
+  catalogId String
+  catalog   Catalog @relation(fields: [catalogId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  position  Int     @default(0)
+
+  @@unique([catalogId, productId])
+  @@index([productId])
+}
+
+/// Carrito enviado desde un catálogo público hacia WhatsApp. El bot puede consultarlo por `code`.
+model CatalogInquiry {
+  id           String   @id @default(cuid())
+  code         String   @unique
+  catalogId    String
+  catalog      Catalog  @relation(fields: [catalogId], references: [id], onDelete: Cascade)
+  customerName String?
+  customerNote String?
+  items        Json
+  itemCount    Int
+  total        Int
+  message      String
+  status       String   @default("NEW") // NEW | CONFIRMED | CANCELLED
+  createdAt    DateTime @default(now())
+
+  @@index([catalogId, createdAt])
+  @@index([createdAt])
 }

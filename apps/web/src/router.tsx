@@ -54,6 +54,7 @@ const guard = (permission: Permission, el: React.ReactNode) => <RequirePermissio
 export const router = createBrowserRouter([
   { path: "/login", element: lazy(() => import("./pages/login")) },
   { path: "/recibo/:id", element: lazy(() => import("./pages/orders/receipt")) },
+  { path: "/catalogo/:slug", element: lazy(() => import("./pages/catalogs/public")) },
   {
     element: <RequireAuth />,
     children: [
@@ -65,6 +66,9 @@ export const router = createBrowserRouter([
           { path: "productos", element: guard("products.read", lazy(() => import("./pages/products/list"))) },
           { path: "productos/nuevo", element: guard("products.write", lazy(() => import("./pages/products/edit"))) },
           { path: "productos/:id", element: guard("products.read", lazy(() => import("./pages/products/edit"))) },
+          { path: "catalogos", element: guard("products.read", lazy(() => import("./pages/catalogs/list"))) },
+          { path: "catalogos/nuevo", element: guard("products.write", lazy(() => import("./pages/catalogs/edit"))) },
+          { path: "catalogos/:id", element: guard("products.read", lazy(() => import("./pages/catalogs/edit"))) },
           { path: "inventario", element: guard("inventory.read", lazy(() => import("./pages/inventory/list"))) },
           { path: "inventario/:variantId/:locationId", element: guard("inventory.read", lazy(() => import("./pages/inventory/detail"))) },
           { path: "inventario/conteos", element: guard("inventory.read", lazy(() => import("./pages/inventory/counts"))) },
