@@ -73,8 +73,8 @@ export default function PurchaseDetailPage() {
                   <tr key={i.id}>
                     <td className="py-2"><ProductCell title={i.variant.product.title} variantTitle={i.variant.title} sku={i.variant.sku} thumbUrl={i.variant.product.thumbUrl} compact /></td>
                     <td className="py-2 text-right tabular text-muted-foreground">{i.pending}</td>
-                    <td className="py-2"><Input type="number" min={0} max={i.pending} className="h-8" value={recv[i.variantId]?.quantity ?? 0} invalid={(recv[i.variantId]?.quantity ?? 0) > i.pending} onChange={(e) => setRecv((r) => ({ ...r, [i.variantId]: { quantity: Math.max(0, Number(e.target.value)), unitCost: r[i.variantId]?.unitCost ?? i.unitCost } }))} aria-label="Cantidad a recibir" /></td>
-                    <td className="py-2"><Input type="number" min={0} className="h-8" value={recv[i.variantId]?.unitCost ?? i.unitCost} onChange={(e) => setRecv((r) => ({ ...r, [i.variantId]: { quantity: r[i.variantId]?.quantity ?? 0, unitCost: Number(e.target.value) } }))} aria-label="Costo unitario" /></td>
+                    <td className="py-2"><Input type="number" min={0} max={i.pending} className="h-9 sm:h-8" value={recv[i.variantId]?.quantity ?? 0} invalid={(recv[i.variantId]?.quantity ?? 0) > i.pending} onChange={(e) => setRecv((r) => ({ ...r, [i.variantId]: { quantity: Math.max(0, Number(e.target.value)), unitCost: r[i.variantId]?.unitCost ?? i.unitCost } }))} aria-label="Cantidad a recibir" /></td>
+                    <td className="py-2"><Input type="number" min={0} className="h-9 sm:h-8" value={recv[i.variantId]?.unitCost ?? i.unitCost} onChange={(e) => setRecv((r) => ({ ...r, [i.variantId]: { quantity: r[i.variantId]?.quantity ?? 0, unitCost: Number(e.target.value) } }))} aria-label="Costo unitario" /></td>
                   </tr>
                 ))}
               </tbody>

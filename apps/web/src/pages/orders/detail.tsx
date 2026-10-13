@@ -136,7 +136,7 @@ function ReturnDialog({ open, onOpenChange, order, methods, onDone }: { open: bo
                 <tr key={i.id}>
                   <td className="py-2"><Checkbox checked={!!s} onCheckedChange={(v) => setSel((x) => { const n = { ...x }; if (v) n[i.id] = { quantity: max, restock: true, restockAs: "AVAILABLE" }; else delete n[i.id]; return n; })} aria-label="Seleccionar" /></td>
                   <td className="py-2"><ProductCell title={i.productTitle} variantTitle={i.variantTitle} sku={i.sku} thumbUrl={i.thumbUrl} compact /></td>
-                  <td className="py-2"><Input type="number" min={1} max={max} className="h-8" disabled={!s} value={s?.quantity ?? ""} onChange={(e) => setSel((x) => ({ ...x, [i.id]: { ...x[i.id]!, quantity: Math.min(max, Math.max(1, Number(e.target.value) || 1)) } }))} aria-label="Cantidad" /></td>
+                  <td className="py-2"><Input type="number" min={1} max={max} className="h-9 sm:h-8" disabled={!s} value={s?.quantity ?? ""} onChange={(e) => setSel((x) => ({ ...x, [i.id]: { ...x[i.id]!, quantity: Math.min(max, Math.max(1, Number(e.target.value) || 1)) } }))} aria-label="Cantidad" /></td>
                   <td className="py-2 pl-3"><Select disabled={!s} value={s ? (s.restock ? s.restockAs : "NONE") : "AVAILABLE"} onValueChange={(v) => setSel((x) => ({ ...x, [i.id]: { ...x[i.id]!, restock: v !== "NONE", restockAs: v === "UNAVAILABLE" ? "UNAVAILABLE" : "AVAILABLE" } }))}><SelectTrigger className="h-8"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="AVAILABLE">A disponible</SelectItem><SelectItem value="UNAVAILABLE">A no disponible (dañado)</SelectItem><SelectItem value="NONE">No reingresa</SelectItem></SelectContent></Select></td>
                 </tr>); })}
             </tbody>

@@ -63,6 +63,10 @@
     margin: 0;
   }
   input[type="number"] { -moz-appearance: textfield; }
+  /* Móvil: campos a 16px para que iOS no haga zoom al enfocar y sean fáciles de tocar. */
+  @media (max-width: 639px) {
+    input:not([type="checkbox"]):not([type="radio"]), select, textarea { font-size: 16px; }
+  }
 }
 
 @layer utilities {

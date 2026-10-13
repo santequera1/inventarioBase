@@ -66,8 +66,8 @@ export default function PurchaseNewPage() {
                     {lines.map((l) => (
                       <tr key={l.variant.id}>
                         <td className="px-4 py-2 sm:px-5"><ProductCell title={l.variant.product.title} variantTitle={l.variant.title} sku={l.variant.sku} thumbUrl={l.variant.product.thumbUrl} compact /></td>
-                        <td className="px-3 py-2"><Input type="number" min={1} className="h-8" value={l.quantity} onChange={(e) => setLines((ls) => ls.map((x) => (x.variant.id === l.variant.id ? { ...x, quantity: Number(e.target.value) } : x)))} aria-label="Cantidad" /></td>
-                        <td className="px-3 py-2"><Input type="number" min={0} className="h-8" value={l.unitCost} onChange={(e) => setLines((ls) => ls.map((x) => (x.variant.id === l.variant.id ? { ...x, unitCost: Number(e.target.value) } : x)))} aria-label="Costo unitario" /></td>
+                        <td className="px-3 py-2"><Input type="number" min={1} className="h-9 sm:h-8" value={l.quantity} onChange={(e) => setLines((ls) => ls.map((x) => (x.variant.id === l.variant.id ? { ...x, quantity: Number(e.target.value) } : x)))} aria-label="Cantidad" /></td>
+                        <td className="px-3 py-2"><Input type="number" min={0} className="h-9 sm:h-8" value={l.unitCost} onChange={(e) => setLines((ls) => ls.map((x) => (x.variant.id === l.variant.id ? { ...x, unitCost: Number(e.target.value) } : x)))} aria-label="Costo unitario" /></td>
                         <td className="px-3 py-2 text-right"><Money value={l.quantity * l.unitCost} /></td>
                         <td className="px-2 py-2 sm:pr-5"><Button variant="ghost" size="icon-sm" aria-label="Quitar" onClick={() => setLines((ls) => ls.filter((x) => x.variant.id !== l.variant.id))}><Trash2 /></Button></td>
                       </tr>

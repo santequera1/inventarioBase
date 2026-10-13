@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { useForm, useFieldArray, Controller } from "react-hook-form";
+import { useForm, useFieldArray, Controller, type Control } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -25,9 +25,27 @@ import { cn, newIdempotencyKey } from "@/lib/utils";
 
 const formSchema = createProductBody.extend({
   options: z.array(productOption),
-  variants: z.array(variantInput.extend({ price: z.coerce.number().int().min(0, "Introduce un precio en COP (entero, sin decimales)"), cost: z.coerce.number().int().min(0).nullable().optional(), compareAtPrice: z.coerce.number().int().min(0).nullable().optional(), weightGrams: z.coerce.number().int().min(0).nullable().optional() })).min(1, "Añade al menos una variante"),
+  variants: z
+    .array(
+      variantInput
+        .extend({
+          price: z.coerce.number().int().min(0, "Introduce un precio en COP (entero, sin decimales)"),
+          cost: z.coerce.number().int().min(0).nullable().optional(),
+          compareAtPrice: z.coerce.number().int().min(0).nullable().optional(),
+          /** Solo en el formulario: precio rebajado. Al guardar pasa a `price` y el precio normal a `compareAtPrice`. */
+          salePrice: z.coerce.number().int().min(0).nullable().optional(),
+          weightGrams: z.coerce.number().int().min(0).nullable().optional(),
+        })
+        .superRefine((v, ctx) => {
+          if (v.salePrice != null && v.salePrice >= v.price) ctx.addIssue({ code: "custom", path: ["salePrice"], message: "Debe ser menor que el precio normal" });
+        }),
+    )
+    .min(1, "Añade al menos una variante"),
 });
 type Form = z.infer<typeof formSchema>;
+
+/** Campo numérico opcional: vacío = null (no 0). */
+const optionalNumber = { setValueAs: (v: unknown) => (v === "" || v === null || v === undefined ? null : Number(v)) };
 
 function cartesian(options: { name: string; values: string[] }[]): Record<string, string>[] {
   if (options.length === 0) return [{}];
@@ -54,7 +72,7 @@ export default function ProductEditPage() {
 
   const form = useForm<Form>({
     resolver: zodResolver(formSchema),
-    defaultValues: { title: "", description: "", status: "ACTIVE", categoryId: null, supplierId: null, tags: [], taxRate: 19, options: [], variants: [{ sku: "", price: 0, cost: null, compareAtPrice: null, barcode: "", weightGrams: null, optionValues: {}, trackInventory: true, active: true, initialStock: [] }], imageIds: [] },
+    defaultValues: { title: "", description: "", status: "ACTIVE", categoryId: null, supplierId: null, tags: [], taxRate: 19, options: [], variants: [{ sku: "", price: 0, cost: null, compareAtPrice: null, salePrice: null, barcode: "", weightGrams: null, optionValues: {}, trackInventory: true, active: true, initialStock: [] }], imageIds: [] },
   });
   const { control, watch, setValue, getValues, reset, formState } = form;
   const variants = useFieldArray({ control, name: "variants", keyName: "_k" });
@@ -64,13 +82,14 @@ export default function ProductEditPage() {
   const watchedVariants = watch("variants");
   const watchedTitle = watch("title");
   const hasOptions = watchedOptions.length > 0;
+  const [bulk, setBulk] = React.useState<{ price: string; salePrice: string; cost: string }>({ price: "", salePrice: "", cost: "" });
 
   React.useEffect(() => {
     const p = product.data;
     if (!p) return;
     reset({
       title: p.title, description: p.description ?? "", status: p.status, categoryId: p.categoryId, supplierId: p.supplierId, tags: p.tags, taxRate: p.taxRate as 0 | 5 | 19, options: p.options,
-      variants: p.variants.map((v) => ({ id: v.id, title: v.title, sku: v.sku, barcode: v.barcode ?? "", price: v.price, compareAtPrice: v.compareAtPrice, cost: v.cost, weightGrams: v.weightGrams, optionValues: v.optionValues, position: v.position, trackInventory: v.trackInventory, active: v.active, imageId: v.imageId })),
+      variants: p.variants.map((v) => ({ id: v.id, title: v.title, sku: v.sku, barcode: v.barcode ?? "", ...(v.compareAtPrice && v.compareAtPrice > v.price ? { price: v.compareAtPrice, salePrice: v.price } : { price: v.price, salePrice: null }), compareAtPrice: null, cost: v.cost, weightGrams: v.weightGrams, optionValues: v.optionValues, position: v.position, trackInventory: v.trackInventory, active: v.active, imageId: v.imageId })),
       imageIds: p.images.map((i) => i.id),
     });
     setImages(p.images.map((i) => ({ id: i.id, url: i.url, thumbUrl: i.thumbUrl })));
@@ -101,7 +120,7 @@ export default function ProductEditPage() {
           (combos.length === 1 ? claim(() => true) : undefined);
         return existing
           ? { ...existing, sku: existing.sku?.trim() || skuFrom(getValues("title") || "SKU", ov), optionValues: ov, position: i }
-          : { sku: skuFrom(getValues("title") || "SKU", ov), price: current[0]?.price ?? 0, cost: current[0]?.cost ?? null, compareAtPrice: null, barcode: "", weightGrams: null, optionValues: ov, trackInventory: true, active: true, position: i, initialStock: [] };
+          : { sku: skuFrom(getValues("title") || "SKU", ov), price: current[0]?.price ?? 0, salePrice: current[0]?.salePrice ?? null, cost: current[0]?.cost ?? null, compareAtPrice: null, barcode: "", weightGrams: null, optionValues: ov, trackInventory: true, active: true, position: i, initialStock: [] };
       });
       setValue("variants", next, { shouldDirty: true });
     },
@@ -157,7 +176,7 @@ export default function ProductEditPage() {
 
   const save = form.handleSubmit(
     async (values) => {
-      const payload = { ...values, description: values.description || null, variants: values.variants.map((v) => ({ ...v, barcode: v.barcode || null, initialStock: isNew ? v.initialStock?.filter((s) => s.available > 0) : undefined })) };
+      const payload = { ...values, description: values.description || null, variants: values.variants.map(({ salePrice, ...v }) => ({ ...v, ...(salePrice != null && salePrice < v.price ? { price: salePrice, compareAtPrice: v.price } : { compareAtPrice: null }), barcode: v.barcode || null, initialStock: isNew ? v.initialStock?.filter((s) => s.available > 0) : undefined })) };
       try {
         if (isNew) {
           const created = await api.post<Product>(v1("/products"), payload, newIdempotencyKey());
@@ -251,17 +270,15 @@ export default function ProductEditPage() {
               </Card>
 
               <Card title="Precio e impuestos">
-                <FormRow cols={3}>
-                  {!hasOptions ? <TextField control={control} name="variants.0.price" label="Precio" required parse="money" inputProps={{ prefix: "$", min: 0 }} /> : null}
-                  {!hasOptions ? <TextField control={control} name="variants.0.compareAtPrice" label="Precio comparado" parse="money" help="Precio anterior tachado" inputProps={{ prefix: "$" }} /> : null}
-                  {!hasOptions ? <TextField control={control} name="variants.0.cost" label="Costo por unidad" parse="money" inputProps={{ prefix: "$" }} /> : null}
+                <FormRow cols={2}>
+                  {!hasOptions ? <TextField control={control} name="variants.0.price" label="Precio" required parse="money" help="Precio normal de venta, IVA incluido." inputProps={{ prefix: "$", min: 0 }} /> : null}
+                  {!hasOptions ? <TextField control={control} name="variants.0.salePrice" label="Precio con descuento" parse="money" help="Opcional. Si lo llenas, se vende a este precio y el normal aparece tachado." inputProps={{ prefix: "$", placeholder: "Sin descuento" }} /> : null}
+                  {!hasOptions ? <TextField control={control} name="variants.0.cost" label="Costo por unidad" parse="money" help="Lo que te cuesta a ti. Solo para calcular tu ganancia." inputProps={{ prefix: "$" }} /> : null}
                   <SelectField control={control} name="taxRate" label="IVA" numeric options={[{ value: "0", label: "0 % (excluido / exento)" }, { value: "5", label: "5 %" }, { value: "19", label: "19 %" }]} />
                 </FormRow>
-                {!hasOptions && (watchedVariants[0]?.price ?? 0) > 0 && watchedVariants[0]?.cost ? (
-                  <p className="mt-3 text-sm text-muted-foreground">
-                    Margen bruto: <Money value={(watchedVariants[0]!.price ?? 0) - (watchedVariants[0]!.cost ?? 0)} /> ({Math.round((((watchedVariants[0]!.price ?? 0) - (watchedVariants[0]!.cost ?? 0)) / (watchedVariants[0]!.price ?? 1)) * 100)} %)
-                  </p>
-                ) : null}
+                {!hasOptions ? <Profit price={watchedVariants[0]?.price} salePrice={watchedVariants[0]?.salePrice} cost={watchedVariants[0]?.cost} className="mt-3" /> : (
+                  <p className="mt-3 text-sm text-muted-foreground">Este producto tiene variantes: el precio, el descuento y el costo se definen en cada variante, más abajo.</p>
+                )}
                 <Controller control={control} name="taxRate" render={({ field }) => <input type="hidden" value={field.value} readOnly />} />
               </Card>
 
@@ -336,47 +353,102 @@ export default function ProductEditPage() {
                   </div>
                 ) : null}
 
-                <div className="-mx-4 overflow-x-auto sm:-mx-5">
-                  <table className="w-full text-base">
-                    <thead className="text-sm text-muted-foreground">
-                      <tr className="border-y border-border">
-                        {hasOptions ? <th className="px-4 py-2 text-left font-medium sm:pl-5">Variante</th> : null}
-                        <th className="px-3 py-2 text-left font-medium">SKU</th>
-                        <th className="px-3 py-2 text-left font-medium">Código de barras</th>
-                        {hasOptions ? <th className="px-3 py-2 text-right font-medium">Precio</th> : null}
-                        {hasOptions ? <th className="px-3 py-2 text-right font-medium">Costo</th> : null}
-                        <th className="px-3 py-2 text-right font-medium">Peso (g)</th>
-                        {isNew ? <th className="px-3 py-2 text-right font-medium">Stock inicial</th> : <th className="px-3 py-2 text-right font-medium">Disponible</th>}
-                        <th className="px-3 py-2 text-center font-medium sm:pr-5">Activa</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {variants.fields.map((v, i) => {
-                        const err = formState.errors.variants?.[i];
-                        const pv = product.data?.variants.find((x) => x.id === watchedVariants[i]?.id);
-                        return (
-                          <tr key={v._k} className={cn(!watchedVariants[i]?.active && "opacity-60")}>
-                            {hasOptions ? <td className="px-4 py-2 font-medium sm:pl-5">{Object.values(watchedVariants[i]?.optionValues ?? {}).join(" / ") || "—"}</td> : null}
-                            <td className="px-3 py-2 min-w-[140px]"><Input {...form.register(`variants.${i}.sku`)} invalid={!!err?.sku} className="h-8" readOnly={readOnly} aria-label="SKU" />{err?.sku ? <p className="mt-1 text-xs text-destructive">{err.sku.message}</p> : null}</td>
-                            <td className="px-3 py-2 min-w-[140px]"><Input {...form.register(`variants.${i}.barcode`)} className="h-8 tabular" readOnly={readOnly} aria-label="Código de barras" placeholder="Opcional" /></td>
-                            {hasOptions ? <td className="px-3 py-2 w-[130px]"><Input type="number" {...form.register(`variants.${i}.price`)} invalid={!!err?.price} className="h-8" readOnly={readOnly} aria-label="Precio" /></td> : null}
-                            {hasOptions ? <td className="px-3 py-2 w-[130px]"><Input type="number" {...form.register(`variants.${i}.cost`)} className="h-8" readOnly={readOnly} aria-label="Costo" /></td> : null}
-                            <td className="px-3 py-2 w-[100px]"><Input type="number" {...form.register(`variants.${i}.weightGrams`)} className="h-8" readOnly={readOnly} aria-label="Peso en gramos" /></td>
-                            <td className="px-3 py-2 w-[120px] text-right">
-                              {isNew ? (
-                                <Controller control={control} name={`variants.${i}.initialStock`} render={({ field }) => { const loc = locations.data?.find((l) => l.isDefault) ?? locations.data?.[0]; const cur = field.value?.find((s) => s.locationId === loc?.id)?.available ?? ""; return <Input type="number" min={0} className="h-8" aria-label="Stock inicial" value={cur} onChange={(e) => field.onChange(loc ? [{ locationId: loc.id, available: Number(e.target.value || 0) }] : [])} />; }} />
-                              ) : (
-                                <Qty value={pv ? (product.data?.totalAvailable !== undefined ? undefined : null) : null} className="hidden" />
-                              )}
-                              {!isNew ? <VariantAvailable variantId={watchedVariants[i]?.id} /> : null}
-                            </td>
-                            <td className="px-3 py-2 text-center sm:pr-5"><Controller control={control} name={`variants.${i}.active`} render={({ field }) => <Switch checked={field.value} onCheckedChange={field.onChange} disabled={readOnly} aria-label="Variante activa" />} /></td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                {hasOptions && variants.fields.length > 1 && !readOnly ? (
+                  <div className="mb-4 rounded-md bg-muted p-3">
+                    <div className="mb-2 text-sm font-medium">Aplicar a todas las variantes</div>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_1fr_1fr_auto] [&>*]:min-w-0">
+                      <Input type="number" inputMode="numeric" prefix="$" placeholder="Precio" aria-label="Precio para todas" value={bulk.price} onChange={(e) => setBulk((b) => ({ ...b, price: e.target.value }))} />
+                      <Input type="number" inputMode="numeric" prefix="$" placeholder="Descuento" aria-label="Precio con descuento para todas" value={bulk.salePrice} onChange={(e) => setBulk((b) => ({ ...b, salePrice: e.target.value }))} />
+                      <Input type="number" inputMode="numeric" prefix="$" placeholder="Costo" aria-label="Costo para todas" value={bulk.cost} onChange={(e) => setBulk((b) => ({ ...b, cost: e.target.value }))} />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={!bulk.price && !bulk.salePrice && !bulk.cost}
+                        onClick={() => {
+                          getValues("variants").forEach((_, i) => {
+                            if (bulk.price) setValue(`variants.${i}.price`, Number(bulk.price), { shouldDirty: true });
+                            if (bulk.salePrice) setValue(`variants.${i}.salePrice`, Number(bulk.salePrice), { shouldDirty: true });
+                            if (bulk.cost) setValue(`variants.${i}.cost`, Number(bulk.cost), { shouldDirty: true });
+                          });
+                          setBulk({ price: "", salePrice: "", cost: "" });
+                          toast.success("Aplicado a todas las variantes");
+                        }}
+                      >
+                        Aplicar
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+
+                  <div className="space-y-3">
+                    {variants.fields.map((v, i) => {
+                      const err = formState.errors.variants?.[i];
+                      const wv = watchedVariants[i];
+                      const name = Object.values(wv?.optionValues ?? {}).join(" / ");
+                      const moreFields = (
+                        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                          <Field label="SKU" htmlFor={`v-${i}-sku`} error={err?.sku?.message} className="col-span-2">
+                            <Input id={`v-${i}-sku`} {...form.register(`variants.${i}.sku`)} invalid={!!err?.sku} readOnly={readOnly} autoCapitalize="characters" />
+                          </Field>
+                          <Field label="Código de barras" htmlFor={`v-${i}-barcode`}>
+                            <Input id={`v-${i}-barcode`} {...form.register(`variants.${i}.barcode`)} className="tabular" readOnly={readOnly} placeholder="Opcional" inputMode="numeric" />
+                          </Field>
+                          <Field label="Peso (g)" htmlFor={`v-${i}-weight`}>
+                            <Input id={`v-${i}-weight`} type="number" inputMode="numeric" {...form.register(`variants.${i}.weightGrams`, optionalNumber)} readOnly={readOnly} placeholder="Opcional" />
+                          </Field>
+                        </div>
+                      );
+                      return (
+                        <div key={v._k} className={cn("rounded-md border border-border", !wv?.active && "opacity-60")}>
+                          {hasOptions ? (
+                            <div className="flex items-center justify-between gap-3 border-b border-border px-3 py-2">
+                              <span className="min-w-0 truncate font-semibold">{name || `Variante ${i + 1}`}</span>
+                              <label className="flex shrink-0 items-center gap-2 text-sm text-muted-foreground">
+                                Activa
+                                <Controller control={control} name={`variants.${i}.active`} render={({ field }) => <Switch checked={field.value} onCheckedChange={field.onChange} disabled={readOnly} aria-label={`Variante ${name} activa`} />} />
+                              </label>
+                            </div>
+                          ) : null}
+                          <div className="space-y-3 p-3">
+                            {hasOptions ? (
+                              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                                <Field label="Precio" htmlFor={`v-${i}-price`} error={err?.price?.message}>
+                                  <Input id={`v-${i}-price`} type="number" inputMode="numeric" prefix="$" {...form.register(`variants.${i}.price`)} invalid={!!err?.price} readOnly={readOnly} />
+                                </Field>
+                                <Field label="Con descuento" htmlFor={`v-${i}-sale`} error={err?.salePrice?.message}>
+                                  <Input id={`v-${i}-sale`} type="number" inputMode="numeric" prefix="$" {...form.register(`variants.${i}.salePrice`, optionalNumber)} invalid={!!err?.salePrice} readOnly={readOnly} placeholder="—" />
+                                </Field>
+                                <Field label="Costo" htmlFor={`v-${i}-cost`}>
+                                  <Input id={`v-${i}-cost`} type="number" inputMode="numeric" prefix="$" {...form.register(`variants.${i}.cost`, optionalNumber)} readOnly={readOnly} placeholder="—" />
+                                </Field>
+                                <Field label={isNew ? "Stock inicial" : "Disponible"}>
+                                  {isNew ? <InitialStockInput control={control} index={i} locations={locations.data} /> : <div className="flex h-10 items-center"><VariantAvailable variantId={wv?.id} /></div>}
+                                </Field>
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                                <Field label={isNew ? "Stock inicial" : "Disponible"} className="col-span-2 md:col-span-1">
+                                  {isNew ? <InitialStockInput control={control} index={i} locations={locations.data} /> : <div className="flex h-10 items-center"><VariantAvailable variantId={wv?.id} /></div>}
+                                </Field>
+                              </div>
+                            )}
+                            {hasOptions ? <Profit price={wv?.price} salePrice={wv?.salePrice} cost={wv?.cost} /> : null}
+                            {hasOptions ? (
+                              <details className="group" open={!!err?.sku || undefined}>
+                                <summary className="cursor-pointer list-none text-sm font-medium text-[#005BD3] [&::-webkit-details-marker]:hidden">
+                                  <span className="group-open:hidden">Más datos (SKU {wv?.sku ? <span className="tabular">{wv.sku}</span> : null}, código, peso)</span>
+                                  <span className="hidden group-open:inline">Ocultar datos</span>
+                                </summary>
+                                <div className="mt-3">{moreFields}</div>
+                              </details>
+                            ) : (
+                              moreFields
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 {isNew && locations.data ? <p className="mt-3 text-sm text-muted-foreground">El stock inicial se registra en “{(locations.data.find((l) => l.isDefault) ?? locations.data[0])?.name}” como un ajuste con motivo “Stock inicial”. Podrás añadir stock en otras ubicaciones desde Inventario.</p> : null}
                 {formState.errors.variants?.root?.message || (typeof formState.errors.variants?.message === "string" ? formState.errors.variants.message : null) ? <p className="mt-2 text-sm text-destructive">{formState.errors.variants?.root?.message ?? (formState.errors.variants?.message as string)}</p> : null}
               </Card>
@@ -394,7 +466,7 @@ export default function ProductEditPage() {
                     <SelectField control={control} name="categoryId" label="Categoría" options={(categories.data ?? []).map((c) => ({ value: c.id, label: c.name }))} allowEmpty emptyLabel="Sin categoría" />
                     {!readOnly ? (
                       <div className="mt-2 flex gap-2">
-                        <Input placeholder="Nueva categoría" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="h-8" />
+                        <Input placeholder="Nueva categoría" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="h-9 sm:h-8" />
                         <Button type="button" size="sm" variant="secondary" disabled={!newCategory.trim()} onClick={async () => { try { const c = await api.post<{ id: string }>(v1("/categories"), { name: newCategory.trim() }); await invalidate("categories"); setValue("categoryId", c.id, { shouldDirty: true }); setNewCategory(""); } catch { toast.error("No se pudo crear la categoría"); } }}>Crear</Button>
                       </div>
                     ) : null}
@@ -434,6 +506,32 @@ export default function ProductEditPage() {
       <p className="sr-only">{watchedTitle}</p>
       {dialog}
     </Page>
+  );
+}
+
+function Profit({ price, salePrice, cost, className }: { price?: number | null; salePrice?: number | null; cost?: number | null; className?: string }) {
+  const sell = salePrice != null && price != null && salePrice < price ? salePrice : price ?? 0;
+  if (!sell || cost == null || cost === 0) return null;
+  const profit = sell - cost;
+  return (
+    <p className={cn("text-sm text-muted-foreground", className)}>
+      Ganancia por unidad: <Money value={profit} className={cn("font-medium", profit < 0 ? "text-destructive" : "text-foreground")} /> ({Math.round((profit / sell) * 100)} %)
+      {salePrice != null && price != null && salePrice < price ? <span> · descuento del {Math.round((1 - salePrice / price) * 100)} %</span> : null}
+    </p>
+  );
+}
+
+function InitialStockInput({ control, index, locations, className }: { control: Control<Form>; index: number; locations?: { id: string; isDefault: boolean }[]; className?: string }) {
+  const loc = locations?.find((l) => l.isDefault) ?? locations?.[0];
+  return (
+    <Controller
+      control={control}
+      name={`variants.${index}.initialStock`}
+      render={({ field }) => {
+        const cur = field.value?.find((s) => s.locationId === loc?.id)?.available ?? "";
+        return <Input type="number" inputMode="numeric" min={0} className={className} aria-label="Stock inicial" placeholder="0" value={cur} onChange={(e) => field.onChange(loc ? [{ locationId: loc.id, available: Number(e.target.value || 0) }] : [])} />;
+      }}
+    />
   );
 }
 

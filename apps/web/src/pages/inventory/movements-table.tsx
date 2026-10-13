@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import type { ColumnDef } from "@tanstack/react-table";
 import { bucketLabels, movementTypeLabels } from "@inventario/shared";
 import { DataTable } from "@/components/app/data-table";
-import { ProductCell } from "@/components/app/product-cell";
+import { ProductCell, Thumb } from "@/components/app/product-cell";
 import { DateText, Qty } from "@/components/app/format";
 import { formatDate, formatTime } from "@inventario/shared";
 import { Badge } from "@/components/ui/badge";
@@ -63,6 +63,46 @@ export function movementColumns(opts: { showProduct?: boolean; showLocation?: bo
     { id: "available_after", header: "Disponible", cell: ({ row }) => <Qty value={row.original.availableAfter} className="text-muted-foreground" />, meta: { numeric: true, className: "hidden 2xl:table-cell w-[100px]" } },
     { id: "on_hand_after", header: "En existencia", cell: ({ row }) => <Qty value={row.original.availableAfter + row.original.committedAfter + row.original.unavailableAfter} className="text-muted-foreground" />, meta: { numeric: true, className: "hidden 2xl:table-cell w-[110px]" } },
   ];
+}
+
+/** Fila compacta para móvil: producto y cantidad arriba; tipo, motivo y fecha debajo. */
+export function MovementMobileRow({ m, showProduct = true, showLocation }: { m: Movement; showProduct?: boolean; showLocation?: boolean }) {
+  const link = refLink(m);
+  return (
+    <div className="flex min-w-0 items-start gap-3">
+      {showProduct ? <Thumb src={m.variant?.product.thumbUrl} alt={m.variant?.product.title} /> : null}
+      <div className="min-w-0 flex-1">
+        {showProduct ? (
+          m.variant ? (
+            <Link to={`/inventario/${m.variantId}/${m.locationId}`} className="block truncate font-medium leading-5">
+              {m.variant.product.title}
+              {m.variant.title !== "Default" ? <span className="font-normal text-muted-foreground"> · {m.variant.title}</span> : null}
+            </Link>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )
+        ) : null}
+        <div className={cn("flex flex-wrap items-center gap-x-1.5 gap-y-1", showProduct && "mt-1")}>
+          <MovementTypeBadge type={m.type} />
+          {m.bucket !== "AVAILABLE" ? <span className="text-xs text-muted-foreground">{bucketLabels[m.bucket]}</span> : null}
+          <span className="text-sm text-muted-foreground">{formatDate(m.createdAt, { year: undefined })} · <span className="tabular">{formatTime(m.createdAt)}</span></span>
+        </div>
+        {m.reason || m.referenceLabel || m.note || showLocation ? (
+          <div className="mt-0.5 truncate text-sm text-muted-foreground">
+            {[showLocation ? m.location?.name : null, m.reason].filter(Boolean).join(" · ")}
+            {(showLocation && m.location?.name) || m.reason ? (m.referenceLabel || m.note ? " · " : "") : ""}
+            {m.referenceLabel ? (link ? <Link to={link} className="underline underline-offset-2">{m.referenceLabel}</Link> : m.referenceLabel) : null}
+            {m.referenceLabel && m.note ? " · " : null}
+            {m.note}
+          </div>
+        ) : null}
+      </div>
+      <div className="shrink-0 text-right">
+        <Qty value={m.quantity} signed className="font-semibold" />
+        <div className="text-xs text-muted-foreground">quedan <Qty value={m.availableAfter} /></div>
+      </div>
+    </div>
+  );
 }
 
 export { DataTable as MovementsDataTable };

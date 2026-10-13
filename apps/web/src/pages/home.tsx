@@ -31,14 +31,14 @@ export default function HomePage() {
     <Page>
       <PageHeader title={`${greeting}, ${user?.name.split(" ")[0] ?? ""}`} subtitle="Resumen de hoy" secondaryActions={<LocationSelect value={locationId} onChange={setLocationId} allowAll />} />
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
         <Stat label="Ventas de hoy" loading={summary.isLoading} value={<Money value={s?.today.net} />} hint={s ? <span className={cn("tabular", delta > 0 ? "text-tone-success-fg" : delta < 0 ? "text-muted-foreground" : "text-muted-foreground")}>{delta === 0 ? "igual que ayer" : `${delta > 0 ? "+" : "−"}${Math.abs(delta).toLocaleString("es-CO")} vs. ayer`}</span> : null} />
         <Stat label="Órdenes de hoy" loading={summary.isLoading} value={<Qty value={s?.today.orders} />} hint={s ? <span className="tabular">{s.today.items.toLocaleString("es-CO")} artículos vendidos</span> : null} />
-        <Stat label="Stock bajo" loading={summary.isLoading} value={<Qty value={s?.lowStockCount} />} hint={s ? <span className="tabular">{s.outOfStockCount.toLocaleString("es-CO")} agotados</span> : null} to="/inventario?view=low_stock" />
+        <Stat className="col-span-2 sm:col-span-1" label="Stock bajo" loading={summary.isLoading} value={<Qty value={s?.lowStockCount} />} hint={s ? <span className="tabular">{s.outOfStockCount.toLocaleString("es-CO")} agotados</span> : null} to="/inventario?view=low_stock" />
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="flex flex-col gap-4">
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="flex min-w-0 flex-col gap-4">
           <Card title="Stock bajo" padded={false} actions={<Button asChild variant="plain" size="sm"><Link to="/inventario?view=low_stock">Ver todo</Link></Button>}>
             {summary.isError ? (
               <ErrorState error={summary.error} compact />
@@ -47,12 +47,12 @@ export default function HomePage() {
             ) : s && s.lowStock.length > 0 ? (
               <ul className="divide-y divide-border">
                 {s.lowStock.map((r) => (
-                  <li key={`${r.variantId}-${r.locationId}`} className="flex items-center gap-3 px-4 py-2 hover:bg-surface-hover">
+                  <li key={`${r.variantId}-${r.locationId}`} className="flex min-w-0 items-center gap-3 px-4 py-2 hover:bg-surface-hover">
                     <div className="min-w-0 flex-1">
                       <ProductCell title={r.productTitle} variantTitle={r.variantTitle} sku={r.sku} thumbUrl={r.thumbUrl} to={`/inventario/${r.variantId}/${r.locationId}`} />
                     </div>
                     {!locationId ? <span className="hidden truncate text-sm text-muted-foreground sm:inline">{r.locationName}</span> : null}
-                    <div className="text-right">
+                    <div className="shrink-0 text-right">
                       <Qty value={r.available} className="font-medium" />
                       <div className="text-xs text-muted-foreground">{r.available <= 0 ? <Badge tone="neutral">Agotado</Badge> : <Badge tone="warning">Stock bajo</Badge>}</div>
                     </div>
@@ -71,10 +71,10 @@ export default function HomePage() {
               <ul className="divide-y divide-border">
                 {recent.data.data.map((m) => (
                   <li key={m.id} className="flex items-center gap-3 px-4 py-2 text-base hover:bg-surface-hover">
-                    <span className="w-20 shrink-0 text-sm text-muted-foreground"><RelativeDate value={m.createdAt} /></span>
+                    <span className="hidden w-20 shrink-0 text-sm text-muted-foreground sm:block"><RelativeDate value={m.createdAt} /></span>
                     <div className="min-w-0 flex-1">
                       <Link to={`/inventario/${m.variantId}/${m.locationId}`} className="block truncate font-medium hover:underline underline-offset-2">{m.variant?.product.title}{m.variant && m.variant.title !== "Default" ? <span className="text-muted-foreground"> · {m.variant.title}</span> : null}</Link>
-                      <div className="truncate text-sm text-muted-foreground">{movementTypeLabels[m.type] ?? m.type}{m.reason ? ` · ${m.reason}` : ""}{m.bucket !== "AVAILABLE" ? ` · ${bucketLabels[m.bucket]}` : ""}</div>
+                      <div className="truncate text-sm text-muted-foreground"><span className="sm:hidden"><RelativeDate value={m.createdAt} /> · </span>{movementTypeLabels[m.type] ?? m.type}{m.reason ? ` · ${m.reason}` : ""}{m.bucket !== "AVAILABLE" ? ` · ${bucketLabels[m.bucket]}` : ""}</div>
                     </div>
                     <Qty value={m.quantity} signed className="font-medium" />
                   </li>
@@ -86,7 +86,7 @@ export default function HomePage() {
           </Card>
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex min-w-0 flex-col gap-4">
           <Card title="Accesos directos">
             <div className="grid gap-1">
               {can("pos.use") ? <Shortcut to="/pos" icon={<ShoppingCart />} label="Nueva venta" /> : null}
@@ -113,20 +113,20 @@ export default function HomePage() {
   );
 }
 
-function Stat({ label, value, hint, loading, to }: { label: string; value: React.ReactNode; hint?: React.ReactNode; loading?: boolean; to?: string }) {
+function Stat({ label, value, hint, loading, to, className }: { label: string; value: React.ReactNode; hint?: React.ReactNode; loading?: boolean; to?: string; className?: string }) {
   const inner = (
     <>
       <div className="text-sm font-medium text-muted-foreground">{label}</div>
-      {loading ? <Skeleton className="mt-1.5 h-7 w-28" /> : <div className="mt-1 text-lg font-semibold leading-7">{value}</div>}
+      {loading ? <Skeleton className="mt-1.5 h-7 w-28" /> : <div className="mt-1 truncate text-lg font-semibold leading-7">{value}</div>}
       {hint ? <div className="mt-0.5 text-sm text-muted-foreground">{hint}</div> : null}
     </>
   );
   return to ? (
-    <Link to={to} className="surface block p-4 transition-colors hover:bg-surface-hover">
+    <Link to={to} className={cn("surface block min-w-0 p-4 transition-colors hover:bg-surface-hover", className)}>
       {inner}
     </Link>
   ) : (
-    <div className="surface p-4">{inner}</div>
+    <div className={cn("surface min-w-0 p-4", className)}>{inner}</div>
   );
 }
 

@@ -87,7 +87,7 @@ function NewCountDialog({ open, onOpenChange, defaultLocationId }: { open: boole
                   <tr key={l.variant.id}>
                     <td className="py-1.5"><ProductCell title={l.variant.product.title} variantTitle={l.variant.title} sku={l.variant.sku} thumbUrl={l.variant.product.thumbUrl} compact /></td>
                     <td className="py-1.5 text-right tabular text-muted-foreground">{l.variant.available ?? 0}</td>
-                    <td className="py-1.5"><Input type="number" min={0} className="h-8" value={l.counted} onChange={(e) => setLines((ls) => ls.map((x) => (x.variant.id === l.variant.id ? { ...x, counted: Math.max(0, Number(e.target.value)) } : x)))} aria-label="Contado" /></td>
+                    <td className="py-1.5"><Input type="number" min={0} className="h-9 sm:h-8" value={l.counted} onChange={(e) => setLines((ls) => ls.map((x) => (x.variant.id === l.variant.id ? { ...x, counted: Math.max(0, Number(e.target.value)) } : x)))} aria-label="Contado" /></td>
                     <td className="py-1.5 text-right"><Qty value={l.counted - (l.variant.available ?? 0)} signed className="font-medium" /></td>
                     <td className="py-1.5 text-right"><Button variant="ghost" size="icon-sm" aria-label="Quitar" onClick={() => setLines((ls) => ls.filter((x) => x.variant.id !== l.variant.id))}><Trash2 /></Button></td>
                   </tr>

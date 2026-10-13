@@ -8,7 +8,7 @@ export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElem
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(({ className, type, prefix, suffix, invalid, ...props }, ref) => {
-  const base = "h-9 w-full rounded-md border bg-card text-base text-foreground placeholder:text-muted-foreground/80 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground";
+  const base = "h-10 sm:h-9 w-full rounded-md border bg-card text-base text-foreground placeholder:text-muted-foreground/80 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground";
   const border = invalid ? "border-destructive focus-visible:ring-destructive" : "border-input hover:border-[#8a8a8a] focus-visible:border-ring";
   if (prefix || suffix) {
     return (

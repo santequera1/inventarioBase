@@ -14,7 +14,7 @@ import { useAuth } from "@/lib/auth";
 import { useDebounce, useSelectedLocation, useUrlState } from "@/lib/hooks";
 import { usePage, type Movement } from "@/lib/queries";
 import { downloadBlob } from "@/lib/utils";
-import { movementColumns } from "./movements-table";
+import { movementColumns, MovementMobileRow } from "./movements-table";
 
 const DEFAULTS = { view: "all", q: "", type: "", bucket: "", from: "", to: "", sort: "created_at:desc" };
 const VIEW_TYPES: Record<string, string> = { sales: "SALE,RETURN,CANCELLATION", adjustments: "ADJUSTMENT,COUNT,STATE_CHANGE", receipts: "RECEIPT,PURCHASE_INCOMING", transfers: "TRANSFER_IN,TRANSFER_OUT" };
@@ -62,7 +62,7 @@ export default function MovementsPage() {
 
   return (
     <Page width="wide">
-      <PageHeader title="Movimientos de inventario" subtitle="Libro mayor inmutable: cada cambio de stock, con su motivo, usuario y documento origen." secondaryActions={<LocationSelect value={locationId} onChange={setLocationId} allowAll />} primaryAction={<Button variant="secondary" onClick={exportCsv}><Download /> Exportar CSV</Button>} />
+      <PageHeader title="Movimientos de inventario" subtitle={<span className="hidden sm:inline">Libro mayor inmutable: cada cambio de stock, con su motivo, usuario y documento origen.</span>} secondaryActions={<LocationSelect value={locationId} onChange={setLocationId} allowAll />} primaryAction={<Button variant="secondary" onClick={exportCsv}><Download /> Exportar CSV</Button>} />
       <div className="surface overflow-hidden">
         <IndexTableHeader
           resource="movements"
@@ -97,6 +97,7 @@ export default function MovementsPage() {
             data={movements.data?.data ?? []}
             loading={movements.isLoading || movements.isFetching}
             getRowId={(r) => r.id}
+            mobileRow={(m) => <MovementMobileRow m={m} showLocation={!locationId} />}
             sorting={sorting}
             onSortingChange={(u) => {
               const next = typeof u === "function" ? u(sorting) : u;

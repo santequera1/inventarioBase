@@ -97,7 +97,7 @@ export function BulkAdjustDialog({ open, onOpenChange, rows, onDone }: { open: b
                     <td className="px-3 py-1.5"><ProductCell title={row.variant!.product.title} variantTitle={row.variant!.title} sku={row.variant!.sku} thumbUrl={row.variant!.product.thumbUrl} compact /></td>
                     <td className="px-3 py-1.5 text-right"><Qty value={row.available} /></td>
                     <td className="px-3 py-1.5">
-                      <Input type="text" inputMode="numeric" className="h-8 text-right" value={values[row.id] ?? ""} invalid={(values[row.id] ?? "") !== "" && !valid} onChange={(e) => setValues((v) => ({ ...v, [row.id]: e.target.value.replace(/[^\d-]/g, "").replace(/(?!^)-/g, "") }))} placeholder={mode === "delta" ? "+5 / -2" : String(row.available)} />
+                      <Input type="text" inputMode="numeric" className="h-9 sm:h-8 text-right" value={values[row.id] ?? ""} invalid={(values[row.id] ?? "") !== "" && !valid} onChange={(e) => setValues((v) => ({ ...v, [row.id]: e.target.value.replace(/[^\d-]/g, "").replace(/(?!^)-/g, "") }))} placeholder={mode === "delta" ? "+5 / -2" : String(row.available)} />
                     </td>
                     <td className="px-3 py-1.5 text-right tabular">
                       {after === null ? <span className="text-muted-foreground">—</span> : <span className="inline-flex items-center gap-1 font-medium"><ArrowRight className="h-3 w-3 text-muted-foreground" />{after.toLocaleString("es-CO")}</span>}

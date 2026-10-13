@@ -97,7 +97,7 @@ export default function TransferDetailPage() {
                   <tr key={i.id}>
                     <td className="py-2"><ProductCell title={i.variant.product.title} variantTitle={i.variant.title} sku={i.variant.sku} thumbUrl={i.variant.product.thumbUrl} compact /></td>
                     <td className="py-2 text-right tabular text-muted-foreground">{i.pending}</td>
-                    <td className="py-2"><Input type="number" min={0} max={i.pending} className="h-8" value={receiveQty[i.variantId] ?? 0} invalid={(receiveQty[i.variantId] ?? 0) > i.pending} onChange={(e) => setReceiveQty((q) => ({ ...q, [i.variantId]: Math.max(0, Number(e.target.value)) }))} aria-label="Cantidad a recibir" /></td>
+                    <td className="py-2"><Input type="number" min={0} max={i.pending} className="h-9 sm:h-8" value={receiveQty[i.variantId] ?? 0} invalid={(receiveQty[i.variantId] ?? 0) > i.pending} onChange={(e) => setReceiveQty((q) => ({ ...q, [i.variantId]: Math.max(0, Number(e.target.value)) }))} aria-label="Cantidad a recibir" /></td>
                   </tr>
                 ))}
               </tbody>

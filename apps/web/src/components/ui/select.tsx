@@ -10,7 +10,7 @@ const SelectValue = SelectPrimitive.Value;
 const SelectTrigger = React.forwardRef<React.ElementRef<typeof SelectPrimitive.Trigger>, React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger> & { invalid?: boolean }>(({ className, children, invalid, ...props }, ref) => (
   <SelectPrimitive.Trigger
     ref={ref}
-    className={cn("flex h-9 w-full items-center justify-between gap-2 rounded-md border bg-card px-3 text-base data-[placeholder]:text-muted-foreground disabled:cursor-not-allowed disabled:bg-muted [&>span]:truncate [&>span]:text-left", invalid ? "border-destructive" : "border-input hover:border-[#8a8a8a]", className)}
+    className={cn("flex h-10 sm:h-9 w-full items-center justify-between gap-2 rounded-md border bg-card px-3 text-base data-[placeholder]:text-muted-foreground disabled:cursor-not-allowed disabled:bg-muted [&>span]:truncate [&>span]:text-left", invalid ? "border-destructive" : "border-input hover:border-[#8a8a8a]", className)}
     {...props}
   >
     {children}

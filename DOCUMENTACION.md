@@ -46,7 +46,7 @@ Todo cambio queda en el **historial de movimientos**, que es inmutable: nunca se
 
 1. Título y descripción.
 2. Imágenes (JPG, PNG o WEBP). La primera es la miniatura.
-3. **Precio, precio comparado (tachado), costo e IVA** (0 %, 5 % o 19 %). Los precios incluyen IVA; el recibo lo desglosa.
+3. **Precio, precio con descuento (opcional), costo por unidad e IVA** (0 %, 5 % o 19 %). Si llenas el precio con descuento, el producto se vende a ese precio y el precio normal aparece tachado en los catálogos. El costo solo sirve para calcular tu ganancia (se muestra debajo). Los precios incluyen IVA; el recibo lo desglosa.
 4. **Variantes**: si el producto tiene tallas, colores, etc., pulsa **Añadir opción** (hasta 3: por ejemplo Talla, Color y Material).
    - Escribe el nombre de la opción (puedes cambiar el sugerido).
    - Escribe cada valor y pulsa **Enter**, coma o el botón **Añadir**. Puedes pegar varios separados por coma: `S, M, L, XL`.

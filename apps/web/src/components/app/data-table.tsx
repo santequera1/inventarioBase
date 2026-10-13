@@ -29,9 +29,13 @@ export type DataTableProps<T> = {
   mobileHidden?: string[];
   dense?: boolean;
   footer?: React.ReactNode;
+  /** En móvil (< md) muestra cada fila como esta tarjeta compacta en lugar de la tabla. */
+  mobileRow?: (row: T) => React.ReactNode;
+  /** Vista de cuadrícula (tarjetas) en todos los tamaños; reemplaza la tabla. */
+  gridItem?: (row: T, sel: { selectable: boolean; selected: boolean; toggle: (v: boolean) => void }) => React.ReactNode;
 };
 
-export function DataTable<T>({ columns, data, loading, onRowClick, getRowId, selectable, rowSelection, onRowSelectionChange, bulkActions, sorting, onSortingChange, pagination, empty, mobileHidden = [], dense, footer }: DataTableProps<T>) {
+export function DataTable<T>({ columns, data, loading, onRowClick, getRowId, selectable, rowSelection, onRowSelectionChange, bulkActions, sorting, onSortingChange, pagination, empty, mobileHidden = [], dense, footer, mobileRow, gridItem }: DataTableProps<T>) {
   const allColumns = React.useMemo<ColumnDef<T, unknown>[]>(() => {
     if (!selectable) return columns;
     const sel: ColumnDef<T, unknown> = {
@@ -63,7 +67,7 @@ export function DataTable<T>({ columns, data, loading, onRowClick, getRowId, sel
   return (
     <div>
       {selectable && selectedIds.length > 0 && bulkActions ? (
-        <div className="flex items-center gap-3 border-b border-border bg-surface-selected/60 px-4 py-2">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border bg-surface-selected/60 px-4 py-2">
           <span className="text-base font-medium">
             {selectedIds.length} {selectedIds.length === 1 ? "seleccionado" : "seleccionados"}
           </span>
@@ -74,8 +78,26 @@ export function DataTable<T>({ columns, data, loading, onRowClick, getRowId, sel
         <TableSkeleton cols={Math.min(columns.length, 6)} />
       ) : data.length === 0 ? (
         <div>{empty}</div>
+      ) : gridItem ? (
+        <div className={cn("grid grid-cols-2 gap-3 p-3 sm:grid-cols-3 sm:p-4 lg:grid-cols-4 xl:grid-cols-5", loading && "opacity-60 transition-opacity")}>
+          {table.getRowModel().rows.map((row) => (
+            <div key={row.id} role={onRowClick ? "button" : undefined} tabIndex={onRowClick ? 0 : undefined} onClick={onRowClick ? () => onRowClick(row.original) : undefined} onKeyDown={onRowClick ? (e) => e.key === "Enter" && onRowClick(row.original) : undefined} className={cn("min-w-0", onRowClick && "cursor-pointer")}>
+              {gridItem(row.original, { selectable: !!selectable, selected: row.getIsSelected(), toggle: (v) => row.toggleSelected(v) })}
+            </div>
+          ))}
+        </div>
       ) : (
-        <Table className={cn(loading && "opacity-60 transition-opacity")}>
+        <>
+        {mobileRow ? (
+          <ul className={cn("divide-y divide-border md:hidden", loading && "opacity-60 transition-opacity")}>
+            {table.getRowModel().rows.map((row) => (
+              <li key={row.id} onClick={onRowClick ? () => onRowClick(row.original) : undefined} className={cn("min-w-0 px-4 py-2.5", onRowClick && "cursor-pointer active:bg-surface-hover")}>
+                {mobileRow(row.original)}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <Table className={cn(loading && "opacity-60 transition-opacity")} wrapperClassName={mobileRow ? "hidden md:block" : undefined}>
           <TableHeader>
             {table.getHeaderGroups().map((hg) => (
               <TableRow key={hg.id} className="hover:bg-transparent">
@@ -114,6 +136,7 @@ export function DataTable<T>({ columns, data, loading, onRowClick, getRowId, sel
             ))}
           </TableBody>
         </Table>
+        </>
       )}
       {footer}
       {pagination && data.length > 0 ? (

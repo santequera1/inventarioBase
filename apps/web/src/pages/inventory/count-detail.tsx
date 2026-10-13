@@ -77,7 +77,7 @@ export default function CountDetailPage() {
                     <tr key={i.id} className="h-13">
                       <td className="px-4 py-2 sm:px-5"><ProductCell title={i.variant.product.title} variantTitle={i.variant.title} sku={i.variant.sku} thumbUrl={i.variant.product.thumbUrl} to={`/inventario/${i.variantId}/${count.locationId}`} /></td>
                       <td className="px-3 py-2 text-right tabular text-muted-foreground">{i.expected}</td>
-                      <td className="px-3 py-2">{open && can("inventory.count") ? <Input type="number" min={0} className="h-8" value={counted} onChange={(e) => setEdits((s) => ({ ...s, [i.variantId]: Math.max(0, Number(e.target.value)) }))} aria-label="Contado" /> : <span className="block text-right tabular">{counted}</span>}</td>
+                      <td className="px-3 py-2">{open && can("inventory.count") ? <Input type="number" min={0} className="h-9 sm:h-8" value={counted} onChange={(e) => setEdits((s) => ({ ...s, [i.variantId]: Math.max(0, Number(e.target.value)) }))} aria-label="Contado" /> : <span className="block text-right tabular">{counted}</span>}</td>
                       <td className="px-3 py-2 text-right sm:pr-5"><Qty value={diff} signed className={diff !== 0 ? "font-medium" : "text-muted-foreground"} /></td>
                     </tr>
                   );
