@@ -51,8 +51,15 @@ function cartesian(options: { name: string; values: string[] }[]): Record<string
   if (options.length === 0) return [{}];
   return options.reduce<Record<string, string>[]>((acc, opt) => acc.flatMap((combo) => opt.values.filter(Boolean).map((v) => ({ ...combo, [opt.name]: v }))), [{}]);
 }
-const skuFrom = (title: string, ov: Record<string, string>) =>
-  [title.slice(0, 3), ...Object.values(ov).map((v) => v.slice(0, 3))].join("-").toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Z0-9-]/g, "");
+/** Código corto aleatorio por producto para que dos productos de nombre parecido no choquen en el SKU. */
+const skuCode = () => Array.from({ length: 4 }, () => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random() * 32)]).join("");
+const skuClean = (s: string) => s.toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Z0-9]/g, "");
+/** "Chancletas Tommy rojas" + talla 41 → "CTR-K7Q2-41" (iniciales del nombre, código del producto, valores de opción). */
+const skuFrom = (title: string, ov: Record<string, string>, code: string) => {
+  const words = title.split(/\s+/).map(skuClean).filter(Boolean);
+  const prefix = words.length > 1 ? words.slice(0, 4).map((w) => w[0]).join("") : (words[0] ?? "SKU").slice(0, 3);
+  return [prefix, code, ...Object.values(ov).map((v) => skuClean(v).slice(0, 3))].filter(Boolean).join("-");
+};
 
 export default function ProductEditPage() {
   const { id } = useParams();
@@ -65,6 +72,7 @@ export default function ProductEditPage() {
   const invalidate = useInvalidate();
   const { confirm, dialog } = useConfirm();
   const product = useQuery({ queryKey: ["product", id], queryFn: () => api.get<Product>(v1(`/products/${id}`)), enabled: !isNew });
+  const skuCodeRef = React.useRef(skuCode());
   const [images, setImages] = React.useState<{ id: string; url: string; thumbUrl: string }[]>([]);
   const [uploading, setUploading] = React.useState(false);
   const [tagInput, setTagInput] = React.useState("");
@@ -119,8 +127,8 @@ export default function ProductEditPage() {
           claim((v) => Object.entries(v.optionValues ?? {}).every(([k, val]) => ov[k] === val) && Object.keys(v.optionValues ?? {}).length < Object.keys(ov).length) ??
           (combos.length === 1 ? claim(() => true) : undefined);
         return existing
-          ? { ...existing, sku: existing.sku?.trim() || skuFrom(getValues("title") || "SKU", ov), optionValues: ov, position: i }
-          : { sku: skuFrom(getValues("title") || "SKU", ov), price: current[0]?.price ?? 0, salePrice: current[0]?.salePrice ?? null, cost: current[0]?.cost ?? null, compareAtPrice: null, barcode: "", weightGrams: null, optionValues: ov, trackInventory: true, active: true, position: i, initialStock: [] };
+          ? { ...existing, sku: existing.sku?.trim() || skuFrom(getValues("title") || "SKU", ov, skuCodeRef.current), optionValues: ov, position: i }
+          : { sku: skuFrom(getValues("title") || "SKU", ov, skuCodeRef.current), price: current[0]?.price ?? 0, salePrice: current[0]?.salePrice ?? null, cost: current[0]?.cost ?? null, compareAtPrice: null, barcode: "", weightGrams: null, optionValues: ov, trackInventory: true, active: true, position: i, initialStock: [] };
       });
       setValue("variants", next, { shouldDirty: true });
     },
