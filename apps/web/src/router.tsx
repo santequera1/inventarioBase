@@ -51,7 +51,26 @@ function RequirePermission({ permission, children }: { permission: Permission; c
 
 const guard = (permission: Permission, el: React.ReactNode) => <RequirePermission permission={permission}>{el}</RequirePermission>;
 
-export const router = createBrowserRouter([
+/**
+ * En el dominio corto de catálogos (VITE_CATALOG_BASE_URL) solo existen los catálogos públicos:
+ * https://tienda.midominio.com/<slug>. El panel sigue en su dominio normal.
+ */
+const catalogHost = (() => {
+  try {
+    const base = import.meta.env.VITE_CATALOG_BASE_URL as string | undefined;
+    return base ? new URL(base).host : null;
+  } catch {
+    return null;
+  }
+})();
+const isCatalogHost = !!catalogHost && window.location.host === catalogHost;
+
+const catalogHostRoutes = [
+  { path: "/:slug", element: lazy(() => import("./pages/catalogs/public")) },
+  { path: "*", element: lazy(() => import("./pages/catalogs/public")) },
+];
+
+export const router = createBrowserRouter(isCatalogHost ? catalogHostRoutes : [
   { path: "/login", element: lazy(() => import("./pages/login")) },
   { path: "/recibo/:id", element: lazy(() => import("./pages/orders/receipt")) },
   { path: "/catalogo/:slug", element: lazy(() => import("./pages/catalogs/public")) },

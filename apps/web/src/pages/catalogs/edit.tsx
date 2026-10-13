@@ -23,6 +23,7 @@ import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTi
 import { api, ApiError, v1 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useInvalidate, type Catalog, type CatalogInquiry, type Page as ApiPage, type Product } from "@/lib/queries";
+import { cn } from "@/lib/utils";
 import { catalogUrl, copyCatalogLink, shareCatalogOnWhatsapp } from "./share";
 
 type Form = {
@@ -30,6 +31,8 @@ type Form = {
   description: string;
   whatsappPhone: string;
   messageIntro: string;
+  logoUrl: string;
+  logoInvert: boolean;
   active: boolean;
   allProducts: boolean;
   showStock: boolean;
@@ -39,7 +42,7 @@ type Form = {
 };
 
 const DEFAULT_PHONE = "+57 314 7543024";
-const empty: Form = { name: "", description: "", whatsappPhone: DEFAULT_PHONE, messageIntro: "", active: true, allProducts: false, showStock: false, hideOutOfStock: true, locationId: "", productIds: [] };
+const empty: Form = { name: "", description: "", whatsappPhone: DEFAULT_PHONE, messageIntro: "", logoUrl: "", logoInvert: false, active: true, allProducts: false, showStock: false, hideOutOfStock: true, locationId: "", productIds: [] };
 
 function toForm(c: Catalog): Form {
   return {
@@ -47,6 +50,8 @@ function toForm(c: Catalog): Form {
     description: c.description ?? "",
     whatsappPhone: `+${c.whatsappPhone}`,
     messageIntro: c.messageIntro ?? "",
+    logoUrl: c.logoUrl ?? "",
+    logoInvert: c.logoInvert,
     active: c.active,
     allProducts: c.allProducts,
     showStock: c.showStock,
@@ -123,6 +128,8 @@ export default function CatalogEditPage() {
       description: form.description.trim() || null,
       whatsappPhone: form.whatsappPhone,
       messageIntro: form.messageIntro.trim() || null,
+      logoUrl: form.logoUrl.trim() || null,
+      logoInvert: form.logoInvert,
       active: form.active,
       allProducts: form.allProducts,
       showStock: form.showStock,
@@ -237,8 +244,15 @@ export default function CatalogEditPage() {
             <Field label="Primera línea del mensaje de WhatsApp" htmlFor="c-intro" help="Opcional. Por defecto: «Hola, quiero hacer este pedido del catálogo …».">
               <Input id="c-intro" value={form.messageIntro} onChange={(e) => set("messageIntro", e.target.value)} placeholder="Hola, quiero hacer este pedido:" disabled={!canWrite} />
             </Field>
+            <Field label="Logo" htmlFor="c-logo" help="Opcional. Enlace a la imagen del logo (https://… o /brand/…). Aparece arriba del catálogo.">
+              <div className="flex items-center gap-3">
+                <Input id="c-logo" value={form.logoUrl} onChange={(e) => set("logoUrl", e.target.value)} placeholder="https://…/logo.png" disabled={!canWrite} className="flex-1" />
+                {form.logoUrl.trim() ? <img src={form.logoUrl.trim()} alt="" className={cn("h-10 w-16 shrink-0 rounded border border-border bg-white object-contain p-1", form.logoInvert && "invert")} /> : null}
+              </div>
+            </Field>
             <div className="divide-y divide-border rounded-md border border-border">
               {([
+                ["logoInvert", "Invertir colores del logo", "Úsalo si tu logo es blanco: se verá negro sobre el fondo claro."],
                 ["active", "Publicado", "Si lo desactivas, el enlace muestra «catálogo no disponible»."],
                 ["hideOutOfStock", "Ocultar productos agotados", "Los productos sin unidades disponibles no aparecen."],
                 ["showStock", "Mostrar unidades disponibles", "Muestra a los clientes cuántas unidades quedan."],

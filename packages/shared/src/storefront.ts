@@ -29,6 +29,8 @@ export const catalogSchema = z.object({
   hideOutOfStock: z.boolean(),
   locationId: z.string().nullable(),
   messageIntro: z.string().nullable(),
+  logoUrl: z.string().nullable(),
+  logoInvert: z.boolean(),
   views: z.number().int(),
   productIds: z.array(z.string()),
   productCount: z.number().int(),
@@ -48,6 +50,8 @@ export const createCatalogBody = z.object({
   hideOutOfStock: z.boolean().default(false),
   locationId: z.string().nullable().optional(),
   messageIntro: z.string().max(500).nullable().optional(),
+  logoUrl: z.string().trim().max(500).regex(/^(https?:\/\/|\/)/, "El logo debe ser una URL (https://…) o una ruta que empiece por /").nullable().optional().or(z.literal("").transform(() => null)),
+  logoInvert: z.boolean().optional(),
   /** Productos en el orden en que se mostrarán (si `allProducts` es false). */
   productIds: z.array(z.string()).max(2000).default([]),
 });
@@ -63,6 +67,8 @@ export const updateCatalogBody = z.object({
   hideOutOfStock: z.boolean().optional(),
   locationId: z.string().nullable().optional(),
   messageIntro: z.string().max(500).nullable().optional(),
+  logoUrl: z.string().trim().max(500).regex(/^(https?:\/\/|\/)/, "El logo debe ser una URL (https://…) o una ruta que empiece por /").nullable().optional().or(z.literal("").transform(() => null)),
+  logoInvert: z.boolean().optional(),
   productIds: z.array(z.string()).max(2000).optional(),
 });
 
@@ -127,7 +133,7 @@ export const publicProductSchema = z.object({
 export type PublicProduct = z.infer<typeof publicProductSchema>;
 
 export const publicCatalogResponse = z.object({
-  catalog: z.object({ name: z.string(), slug: z.string(), description: z.string().nullable(), showStock: z.boolean() }),
+  catalog: z.object({ name: z.string(), slug: z.string(), description: z.string().nullable(), showStock: z.boolean(), logoUrl: z.string().nullable(), logoInvert: z.boolean() }),
   store: z.object({ name: z.string(), city: z.string().nullable(), address: z.string().nullable() }),
   products: z.array(publicProductSchema),
 });

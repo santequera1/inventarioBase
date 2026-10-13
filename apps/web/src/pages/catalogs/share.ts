@@ -1,6 +1,9 @@
 import { toast } from "sonner";
 
-export const catalogUrl = (slug: string) => `${window.location.origin}/catalogo/${slug}`;
+/** Dominio corto opcional para los enlaces públicos (VITE_CATALOG_BASE_URL, p. ej. https://tienda.midominio.com → https://tienda.midominio.com/<slug>). */
+const SHORT_BASE = (import.meta.env.VITE_CATALOG_BASE_URL as string | undefined)?.replace(/\/+$/, "");
+
+export const catalogUrl = (slug: string) => (SHORT_BASE ? `${SHORT_BASE}/${slug}` : `${window.location.origin}/catalogo/${slug}`);
 
 export async function copyCatalogLink(slug: string) {
   const url = catalogUrl(slug);

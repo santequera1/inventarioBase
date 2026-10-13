@@ -1,7 +1,8 @@
 import * as React from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ImageIcon, Minus, Plus, Search, ShoppingBag, Trash2, X } from "lucide-react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { Check, ImageIcon, Menu, Minus, Plus, Search, ShoppingBag, Trash2, X } from "lucide-react";
 import { formatCOP, type PublicCatalogResponse, type PublicProduct } from "@inventario/shared";
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -73,6 +74,7 @@ export default function PublicCatalogPage() {
   const [category, setCategory] = React.useState("");
   const [openProduct, setOpenProduct] = React.useState<PublicProduct | null>(null);
   const [cartOpen, setCartOpen] = React.useState(false);
+  const [menuOpen, setMenuOpen] = React.useState(false);
 
   React.useEffect(() => {
     if (data.data) document.title = `${data.data.catalog.name} · ${data.data.store.name}`;
@@ -129,34 +131,56 @@ export default function PublicCatalogPage() {
 
   return (
     <div className="min-h-screen bg-background pb-28">
-      <header className="bg-card shadow-card">
-        <div className="mx-auto max-w-6xl px-4 pb-4 pt-6 sm:pt-8">
-          <p className="text-sm font-medium text-muted-foreground">{store.name}{store.city ? ` · ${store.city}` : ""}</p>
-          <h1 className="mt-0.5 text-2xl font-semibold tracking-tight sm:text-3xl">{catalog.name}</h1>
-          {catalog.description ? <p className="mt-2 max-w-2xl whitespace-pre-line text-muted-foreground">{catalog.description}</p> : null}
+      <header className="border-b border-border bg-card">
+        <div className="mx-auto max-w-6xl px-4 pb-5 pt-6 text-center sm:pb-7 sm:pt-9">
+          {catalog.logoUrl ? (
+            <>
+              <img src={catalog.logoUrl} alt={store.name} className={cn("mx-auto h-20 w-auto max-w-[70%] object-contain sm:h-28", catalog.logoInvert && "invert")} />
+              <h1 className="sr-only">{catalog.name}</h1>
+            </>
+          ) : (
+            <>
+              <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">{store.name}{store.city ? ` · ${store.city}` : ""}</p>
+              <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">{catalog.name}</h1>
+            </>
+          )}
+          {catalog.description ? <p className="mx-auto mt-3 max-w-xl whitespace-pre-line text-sm text-muted-foreground">{catalog.description}</p> : null}
         </div>
       </header>
 
       <div className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur">
-        <div className="mx-auto max-w-6xl space-y-2 px-4 py-3">
-          <Input prefix={<Search className="h-4 w-4" />} placeholder="Buscar productos" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Buscar productos" className="bg-card" />
-          {categories.length > 1 ? (
-            <div className="scrollbar-thin -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+        <div className="mx-auto max-w-6xl px-4 py-3">
+          <div className="flex items-center gap-2">
+            {categories.length ? (
+              <button type="button" onClick={() => setMenuOpen(true)} aria-label="Ver categorías" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-input bg-card text-foreground hover:bg-surface-hover sm:h-9 sm:w-9 md:hidden">
+                <Menu className="h-5 w-5" />
+              </button>
+            ) : null}
+            <Input prefix={<Search className="h-4 w-4" />} placeholder="Buscar productos" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Buscar productos" className="flex-1 bg-card" />
+          </div>
+          {categories.length ? (
+            <nav aria-label="Categorías" className="scrollbar-thin -mx-4 mt-3 hidden gap-6 overflow-x-auto px-4 md:flex">
               {[{ id: "", name: "Todo" }, ...categories].map((c) => (
-                <button key={c.id} type="button" onClick={() => setCategory(c.id)} className={cn("shrink-0 rounded-full border px-3 py-1 text-sm font-medium transition-colors", category === c.id ? "border-primary bg-primary text-primary-foreground" : "border-input bg-card hover:bg-surface-hover")}>
+                <button key={c.id} type="button" onClick={() => setCategory(c.id)} className={cn("shrink-0 border-b-2 pb-1.5 text-xs font-semibold uppercase tracking-[0.14em] transition-colors", category === c.id ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground")}>
                   {c.name}
                 </button>
               ))}
-            </div>
+            </nav>
           ) : null}
         </div>
       </div>
 
-      <main className="mx-auto max-w-6xl px-4 py-4">
+      <main className="mx-auto max-w-6xl px-4 py-5">
+        {visible.length ? (
+          <div className="mb-4 flex items-baseline justify-between gap-3">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.14em]">{categories.find((c) => c.id === category)?.name ?? (term ? "Resultados" : "Todos los productos")}</h2>
+            <span className="text-sm text-muted-foreground">{visible.length} {visible.length === 1 ? "producto" : "productos"}</span>
+          </div>
+        ) : null}
         {!visible.length ? (
           <div className="py-16 text-center text-muted-foreground">{products.length ? "No encontramos productos con esa búsqueda." : "Este catálogo aún no tiene productos."}</div>
         ) : (
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          <ul className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4">
             {visible.map((p) => (
               <li key={p.id}>
                 <ProductCard product={p} showStock={catalog.showStock} onOpen={() => setOpenProduct(p)} onQuickAdd={(v) => cart.add(v.id, 1, maxFor(v))} />
@@ -178,6 +202,19 @@ export default function PublicCatalogPage() {
         </div>
       ) : null}
 
+      <CategoryDrawer
+        open={menuOpen}
+        onOpenChange={setMenuOpen}
+        logo={catalog.logoUrl ? { url: catalog.logoUrl, invert: catalog.logoInvert, alt: store.name } : null}
+        title={catalog.name}
+        categories={[{ id: "", name: "Todo", count: products.length }, ...categories.map((c) => ({ ...c, count: products.filter((p) => p.category?.id === c.id).length }))]}
+        active={category}
+        onPick={(id) => {
+          setCategory(id);
+          setMenuOpen(false);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
+      />
       <ProductDialog product={openProduct} showStock={catalog.showStock} onClose={() => setOpenProduct(null)} onAdd={(v, qty) => { cart.add(v.id, qty, maxFor(v)); setOpenProduct(null); }} />
       <CartDialog open={cartOpen} onOpenChange={setCartOpen} slug={slug} items={cartItems} total={cartTotal} setQty={cart.setQty} onSent={cart.clear} />
     </div>
@@ -192,12 +229,13 @@ function ProductCard({ product: p, showStock, onOpen, onQuickAdd }: { product: P
   const compare = single?.compareAtPrice && single.compareAtPrice > single.price ? single.compareAtPrice : null;
   const stockTotal = showStock && p.variants.every((v) => v.available !== null) ? p.variants.reduce((a, v) => a + (v.available ?? 0), 0) : null;
   return (
-    <div className="surface group flex h-full flex-col overflow-hidden">
-      <button type="button" onClick={onOpen} className="relative block aspect-square w-full overflow-hidden bg-muted">
+    <div className="group flex h-full flex-col">
+      <button type="button" onClick={onOpen} className="relative block aspect-square w-full overflow-hidden rounded-md bg-muted">
         {img ? <img src={img.thumbUrl} alt={img.alt ?? p.title} loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" /> : <ImageIcon className="absolute inset-0 m-auto h-8 w-8 text-muted-foreground" />}
         {!inStock ? <span className="absolute left-2 top-2 rounded-md bg-[#1a1a1a]/85 px-2 py-0.5 text-xs font-medium text-white">Agotado</span> : compare ? <span className="absolute left-2 top-2 rounded-md bg-destructive px-2 py-0.5 text-xs font-medium text-white">Oferta</span> : null}
       </button>
-      <div className="flex flex-1 flex-col gap-1 p-3">
+      <div className="flex flex-1 flex-col gap-1 pt-2.5">
+        {p.category ? <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">{p.category.name}</p> : null}
         <button type="button" onClick={onOpen} className="line-clamp-2 text-left font-medium leading-5 hover:underline">{p.title}</button>
         <div className="mt-auto flex items-end justify-between gap-2 pt-1">
           <div className="min-w-0">
@@ -210,7 +248,7 @@ function ProductCard({ product: p, showStock, onOpen, onQuickAdd }: { product: P
               type="button"
               aria-label={`Agregar ${p.title}`}
               onClick={() => (single ? onQuickAdd(single) : onOpen())}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-primary-button hover:bg-[#1a1a1a] active:scale-95"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#111] text-white hover:bg-black active:scale-95"
             >
               <Plus className="h-4 w-4" />
             </button>
@@ -454,5 +492,46 @@ function CartDialog({ open, onOpenChange, slug, items, total, setQty, onSent }: 
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function CategoryDrawer({ open, onOpenChange, logo, title, categories, active, onPick }: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  logo: { url: string; invert: boolean; alt: string } | null;
+  title: string;
+  categories: { id: string; name: string; count: number }[];
+  active: string;
+  onPick: (id: string) => void;
+}) {
+  return (
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/40 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+        <DialogPrimitive.Content className="fixed inset-y-0 left-0 z-50 flex w-[82%] max-w-xs flex-col bg-card shadow-popover duration-200 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left">
+          <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
+            {logo ? <img src={logo.url} alt={logo.alt} className={cn("h-10 w-auto object-contain", logo.invert && "invert")} /> : <span className="font-semibold">{title}</span>}
+            <DialogPrimitive.Close className="rounded-md p-1.5 text-muted-foreground hover:bg-black/5 hover:text-foreground" aria-label="Cerrar">
+              <X className="h-5 w-5" />
+            </DialogPrimitive.Close>
+          </div>
+          <DialogPrimitive.Title className="px-5 pb-2 pt-5 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Categorías</DialogPrimitive.Title>
+          <DialogPrimitive.Description className="sr-only">Elige una categoría para filtrar el catálogo</DialogPrimitive.Description>
+          <ul className="flex-1 overflow-y-auto pb-6">
+            {categories.map((c) => {
+              const on = active === c.id;
+              return (
+                <li key={c.id || "all"}>
+                  <button type="button" onClick={() => onPick(c.id)} className={cn("flex w-full items-center justify-between gap-3 border-l-2 px-5 py-3 text-left text-sm uppercase tracking-[0.12em] transition-colors", on ? "border-foreground bg-black/[0.03] font-semibold text-foreground" : "border-transparent text-foreground/80 hover:bg-black/[0.03]")}>
+                    <span className="flex items-center gap-2">{c.name}{on ? <Check className="h-4 w-4" /> : null}</span>
+                    <span className="text-xs font-normal tabular-nums text-muted-foreground">{c.count}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }

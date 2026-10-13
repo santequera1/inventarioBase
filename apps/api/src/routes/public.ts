@@ -24,7 +24,7 @@ export default async function publicRoutes(app: App) {
       app.db.catalog.update({ where: { id: catalog.id }, data: { views: { increment: 1 } } }).catch(() => undefined);
       reply.header("cache-control", "no-store");
       return {
-        catalog: { name: catalog.name, slug: catalog.slug, description: catalog.description, showStock: catalog.showStock },
+        catalog: { name: catalog.name, slug: catalog.slug, description: catalog.description, showStock: catalog.showStock, logoUrl: catalog.logoUrl, logoInvert: catalog.logoInvert },
         store: { name: settings.name, city: settings.city, address: settings.address },
         products,
       };

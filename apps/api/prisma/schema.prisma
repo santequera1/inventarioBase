@@ -634,6 +634,10 @@ model Catalog {
   /// Ubicación de la que se toma el stock; null = todas las ubicaciones activas que venden en línea.
   locationId     String?
   messageIntro   String?
+  /// Logo que encabeza el catálogo público (URL absoluta o ruta del sitio, p. ej. /brand/logo.png).
+  logoUrl        String?
+  /// Invierte los colores del logo (útil para logos blancos sobre fondo claro).
+  logoInvert     Boolean          @default(false)
   views          Int              @default(0)
   items          CatalogItem[]
   inquiries      CatalogInquiry[]

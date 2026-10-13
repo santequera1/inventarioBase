@@ -47,6 +47,8 @@ export function serializeCatalog(c: Catalog & { items: { productId: string }[]; 
     hideOutOfStock: c.hideOutOfStock,
     locationId: c.locationId,
     messageIntro: c.messageIntro,
+    logoUrl: c.logoUrl,
+    logoInvert: c.logoInvert,
     views: c.views,
     productIds: c.items.map((i) => i.productId),
     productCount: productCount ?? c.items.length,
